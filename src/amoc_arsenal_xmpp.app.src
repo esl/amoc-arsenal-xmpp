@@ -1,0 +1,15 @@
+{application, amoc_arsenal_xmpp,
+ [{description, "A library for esl/amoc sceanrios"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {maintainers, []},
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
