@@ -28,7 +28,6 @@ FROM phusion/baseimage
 MAINTAINER Erlang Solutions <mongoose-im@erlang-solutions.com>
 
 ARG vsn
-ARG amoc_vsn
 ARG amoc_arsenal_home=/home/amoc/amoc_arsenal_xmpp
 ARG amoc_github=https://raw.githubusercontent.com/esl/amoc
 
@@ -46,9 +45,9 @@ RUN chown -R amoc:amoc ${amoc_arsenal_home}
 EXPOSE 4000
 
 RUN mkdir /etc/service/amoc
-RUN curl ${amoc_github}/${amoc_vsn}/docker/amoc.sh --output /etc/service/amoc/run && chmod +x /etc/service/amoc/run
-RUN curl ${amoc_github}/${amoc_vsn}/docker/config/vm.args --output /home/amoc/amoc_arsenal_xmpp/releases/${vsn}/vm.args
-RUN curl ${amoc_github}/${amoc_vsn}/docker/config/sys.config.template --output /sys.config.template
-RUN curl ${amoc_github}/${amoc_vsn}/docker/run.sh --output /run.sh && chmod +x /run.sh
+COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/docker/amoc.sh /etc/service/amoc/run
+COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/docker/config/vm.args /home/amoc/amoc_arsenal_xmpp/releases/${vsn}/vm.args
+COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/docker/config/sys.config.template /sys.config.template
+COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/docker/run.sh /run.sh
 
 CMD ["/run.sh"]
