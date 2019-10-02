@@ -1,0 +1,24 @@
+sudo: false
+
+language: erlang
+otp_release:
+  - 22.0
+  - 21.3
+
+branches:
+  only:
+    - master
+
+addons:
+  apt:
+    packages:
+      - libexpat1-dev
+
+install: rebar3 compile
+script:
+  - rebar3 xref
+  - rebar3 dialyzer
+
+cache:
+  directories:
+    - $HOME/.cache/rebar3
