@@ -8,6 +8,7 @@ otp_release:
 branches:
   only:
     - master
+    - /BUILD.*/
 
 addons:
   apt:
