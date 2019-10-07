@@ -8,6 +8,7 @@ otp_release:
 branches:
   only:
     - master
+    - /BUILD.*/
 
 addons:
   apt:
@@ -18,6 +19,7 @@ install: rebar3 compile
 script:
   - rebar3 xref
   - rebar3 dialyzer
+  - rebar3 gradualizer
 
 cache:
   directories:
