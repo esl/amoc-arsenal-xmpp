@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Waiting for a running container to become healthy.
 # Waits if no container was found with reason "no such object".
-# Waits if the container does not healthcheck configured.
+# Waits for the container configured healthcheck.
 # Fails if this script runs for too long with the reason "Killed by timeout".
 #
 # Usage example:
