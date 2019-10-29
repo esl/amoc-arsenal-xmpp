@@ -41,6 +41,7 @@ EXPOSE 4000
 
 RUN mkdir /etc/service/amoc
 COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/docker/amoc.sh /etc/service/amoc/run
+COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/priv/vm.args /home/amoc/amoc_arsenal_xmpp/releases/${vsn}/vm.args
 COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/docker/run.sh /run.sh
 
 CMD ["/run.sh"]
