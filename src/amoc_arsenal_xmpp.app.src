@@ -6,7 +6,8 @@
    [kernel,
     stdlib,
     amoc,
-    escalus
+    escalus,
+    mnesia
    ]},
   {env,[]},
   {modules, []},
