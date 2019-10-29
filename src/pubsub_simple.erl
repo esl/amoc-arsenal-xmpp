@@ -6,7 +6,7 @@
 -include_lib("escalus/include/escalus.hrl").
 
 -required_variable({'IQ_TIMEOUT',         <<"IQ timeout (milliseconds, def: 10000ms)"/utf8>>}).
--reqeired_variable({'COORDINATOR_DELAY',  <<"Delay after N subscriptions (milliseconds, def: 0ms)"/utf8>>}).
+-required_variable({'COORDINATOR_DELAY',  <<"Delay after N subscriptions (milliseconds, def: 0ms)"/utf8>>}).
 -required_variable({'NODE_CREATION_RATE', <<"Rate of node creations (per minute, def:600)">>}).
 -required_variable({'PUBLICATION_SIZE',   <<"Size of additional payload (bytes, def:300)">>}).
 -required_variable({'PUBLICATION_RATE',   <<"Rate of publications (per minute, def:1500)">>}).
@@ -31,8 +31,7 @@
 -define(NODE_CREATION_THROTTLING, node_creation).
 -define(PUBLICATION_THROTTLING, publication).
 
--define(COORDINATOR_ID, 1).
--define(COORDINATOR_TIMEOUT, 100000).
+-define(COORDINATOR_TIMEOUT, 100).
 
 -export([init/0, start/2]).
 
@@ -46,6 +45,7 @@ init() ->
 
             amoc_throttle:start(?NODE_CREATION_THROTTLING, NodeCreationRate),
             amoc_throttle:start(?PUBLICATION_THROTTLING, PublicationRate),
+            start_coordinator(Settings),
             {ok, Settings};
         Error -> Error
     end.
@@ -53,10 +53,7 @@ init() ->
 -spec start(amoc_scenario:user_id(), amoc_scenario:state()) -> any().
 start(Id, Settings) ->
     Client = connect_amoc_user(Id, Settings),
-    case get_role(Id) of
-        coordinator -> start_coordinator(Client, Settings);
-        user -> start_user(Client, Settings)
-    end.
+    start_user(Client, Settings).
 
 init_metrics() ->
     Counters = [message,
@@ -72,75 +69,41 @@ init_metrics() ->
     [amoc_metrics:init(counters, Metric) || Metric <- Counters],
     [amoc_metrics:init(times, Metric) || Metric <- Times].
 
-get_role(1) -> coordinator;
-get_role(_) -> user.
-
 %%------------------------------------------------------------------------------------------------
 %% Coordinator
 %%------------------------------------------------------------------------------------------------
-start_coordinator(Client, Settings) ->
-    pg2:create(?GROUP_NAME),
-    Coordinator = spawn(fun() -> coordinator_fn(Settings) end),
-    pg2:join(?GROUP_NAME, Coordinator),
-    start_user(Client, Settings).
+start_coordinator(Settings) ->
+    amoc_coordinator:start(?MODULE, get_coordination_plan(Settings), ?COORDINATOR_TIMEOUT).
 
-coordinator_fn(Settings) ->
-    lager:debug("coordinator process ~p", [self()]),
-    coordinator_loop(Settings, []).
-
-coordinator_loop(Settings, AllPids) ->
+get_coordination_plan(Settings) ->
     N = get_no_of_node_subscribers(Settings),
-    coordinator_delay(Settings),
-    case wait_for_n_nodes([], [], N, Settings) of
-        {timeout, []} when AllPids =:= [] -> coordinator_loop(Settings, []);
-        {timeout, Pids} ->
-            activate_users(Settings, Pids, n_nodes),
-            activate_users(Settings, Pids ++ AllPids, all_nodes),
-            lager:error("Waited too long for the new user!"),
-            coordinator_loop(Settings, []);
-        {ok, Pids} ->
-            activate_users(Settings, Pids, n_nodes),
-            coordinator_loop(Settings, Pids ++ AllPids)
+
+    [{N, [fun subscribe_users/2,
+          users_activation(Settings, n_nodes),
+          coordination_delay(Settings)]},
+     {all, users_activation(Settings, all_nodes)}].
+
+subscribe_users(_, CoordinationData) ->
+    PidsAndNodes = [{Pid, Node} || {Pid, {_Client, Node}} <- CoordinationData],
+    [subscribe_msg(P, N) || {P, _} <- PidsAndNodes, {_, N} <- PidsAndNodes].
+
+users_activation(Settings, ActivationPolicy) ->
+    case get_parameter(activation_policy, Settings) of
+        ActivationPolicy ->
+            fun(_, CoordinationData) ->
+                [schedule_publishing(Pid) || {Pid, _} <- CoordinationData]
+            end;
+        _ -> fun(_) -> ok end
     end.
 
-coordinator_delay(Settings) ->
-    timer:sleep(get_parameter(coordinator_delay, Settings)).
-
-wait_for_n_nodes(Pids, _, 0, _) ->
-    {ok, Pids};
-wait_for_n_nodes(Pids, Nodes, N, Settings) ->
-    receive
-        {new_node, NewPid, NewNode} ->
-            subscribe_users(Settings, Pids, Nodes, NewPid, NewNode),
-            wait_for_n_nodes([NewPid | Pids],
-                             [NewNode | Nodes], N - 1, Settings)
-    after ?COORDINATOR_TIMEOUT ->
-        {timeout, Pids}
+coordination_delay(Settings) ->
+    Delay = get_parameter(coordinator_delay, Settings),
+    fun({coordinate, _}) -> timer:sleep(Delay);
+        (_) -> ok
     end.
-
-subscribe_users(Settings, Pids, Nodes, NewPid, NewNode) ->
-    activate_users(Settings, [NewPid], one_node),
-    [subscribe_msg(NewPid, N) || N <- Nodes],
-    [subscribe_msg(P, NewNode) || P <- Pids],
-    subscribe_msg(NewPid, NewNode).
 
 subscribe_msg(Pid, Node) ->
     Pid ! {subscribe_to, Node}.
-
-activate_users(Settings, Pids, ActivationPolicy) ->
-    case get_parameter(activation_policy, Settings) of
-        ActivationPolicy ->
-            [schedule_publishing(Pid)||Pid<-Pids];
-        _ -> ok
-    end.
-
-get_coordinator_pid() ->
-    case pg2:get_members(?GROUP_NAME) of
-        [Coordinator] -> Coordinator;
-        _ -> %% [] or {error, {no_such_group, ?GROUP_NAME}}
-            timer:sleep(100),
-            get_coordinator_pid()
-    end.
 
 %%------------------------------------------------------------------------------------------------
 %% User
@@ -153,10 +116,9 @@ start_user(Client, Settings) ->
     user_loop(Settings, Client, Node, #{}).
 
 create_new_node(Client, Settings) ->
-    Coordinator = get_coordinator_pid(),
     amoc_throttle:send_and_wait(?NODE_CREATION_THROTTLING, create_node),
     Node = create_pubsub_node(Client, Settings),
-    Coordinator ! {new_node, self(), Node},
+    amoc_coordinator:add(?MODULE, {Client, Node}),
     Node.
 
 user_loop(Settings, Client, Node, Requests) ->
@@ -188,14 +150,14 @@ verify_request(Requests, Settings) ->
     IqTimeout = get_parameter(iq_timeout, Settings),
     Now = os:system_time(microsecond),
     VerifyFN =
-        fun(Key, Value) ->
-            case Value of
-                {new, TS} when Now > TS + IqTimeout * 1000 ->
-                    update_timeout_metrics(Key),
-                    {timeout, TS};
-                _ -> Value
-            end
-        end,
+    fun(Key, Value) ->
+        case Value of
+            {new, TS} when Now > TS + IqTimeout * 1000 ->
+                update_timeout_metrics(Key),
+                {timeout, TS};
+            _ -> Value
+        end
+    end,
     maps:map(VerifyFN, Requests).
 
 update_timeout_metrics(<<"publish", _/binary>>) ->
@@ -213,8 +175,8 @@ schedule_publishing(Pid) ->
 %%------------------------------------------------------------------------------------------------
 connect_amoc_user(Id, Settings) ->
     ExtraProps = amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
-    [{server, get_parameter(mim_host, Settings)},
-     {socket_opts, socket_opts()}],
+                 [{server, get_parameter(mim_host, Settings)},
+                  {socket_opts, socket_opts()}],
 
     {ok, Client, _} = amoc_xmpp:connect_or_exit(Id, ExtraProps),
     erlang:put(jid, Client#client.jid),
@@ -246,7 +208,7 @@ create_pubsub_node(Client, Settings) ->
             lager:debug("node creation ~p (~p)", [Node, self()]),
             amoc_metrics:update_counter(node_creation_success, 1),
             amoc_metrics:update_time(node_creation, CreateNodeTime);
-        {false,{'EXIT',{timeout_when_waiting_for_stanza,_}}}->
+        {false, {'EXIT', {timeout_when_waiting_for_stanza, _}}} ->
             amoc_metrics:update_counter(node_creation_timeout, 1),
             lager:error("Timeout creating node: ~p", [CreateNodeResult]),
             exit(node_creation_timeout);
@@ -287,9 +249,9 @@ publish_pubsub_item(Client, Node, Settings) ->
 item_content(PayloadSize) ->
     Payload = #xmlcdata{content = <<<<"A">> || _ <- lists:seq(1, PayloadSize)>>},
     #xmlel{
-        name     = <<"entry">>,
-        attrs    = [{<<"timestamp">>, integer_to_binary(os:system_time(microsecond))},
-                    {<<"jid">>, erlang:get(jid)}],
+        name = <<"entry">>,
+        attrs = [{<<"timestamp">>, integer_to_binary(os:system_time(microsecond))},
+                 {<<"jid">>, erlang:get(jid)}],
         children = [Payload]}.
 
 %%------------------------------------------------------------------------------------------------
@@ -381,16 +343,12 @@ random_suffix() ->
 
 get_parameter(Name, Settings) ->
     case amoc_config:get_scenario_parameter(Name, Settings) of
-        {error,Err} ->
+        {error, Err} ->
             lager:error("amoc_config:get_scenario_parameter/1 failed ~p", [Err]),
             exit(Err);
-        {ok,Value} -> Value
+        {ok, Value} -> Value
     end.
 
 get_no_of_node_subscribers(Settings) ->
     %instead of constant No of subscriptions we can use min/max values.
     get_parameter(n_of_subscribers, Settings).
-
-
-
-
