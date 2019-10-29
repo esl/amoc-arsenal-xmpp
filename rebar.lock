@@ -1,7 +1,7 @@
 {"1.1.0",
 [{<<"amoc">>,
   {git,"https://github.com/esl/amoc",
-       {ref,"d756cffebc7f157c5f337b7520c808b68c76b38e"}},
+       {ref,"b89a92770d04f0a48ce5a6c508bd033293a1fc03"}},
   0},
  {<<"base16">>,
   {git,"https://github.com/goj/base16.git",
