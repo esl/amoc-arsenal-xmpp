@@ -5,6 +5,8 @@
 -export([start/1]).
 -export([init/0]).
 
+-include_lib("kernel/include/logger.hrl").
+
 -spec init() -> ok.
 init() ->
     http_req:start(),
@@ -30,7 +32,7 @@ do_start(xmpp, MyId) ->
     escalus_connection:stop(Client).
 
 log_message(_Client, Stanza) ->
-    lager:warning("~p", [Stanza]),
+    ?LOG_WARNING("~p", [Stanza]),
     true.
 
 send_message(AuthHeader, Id) ->
@@ -40,7 +42,7 @@ send_message(AuthHeader, Id) ->
     Headers = [AuthHeader,
                {<<"content-type">>, <<"application/json">>}],
     R = http_req:post_request("https://localhost:8089", <<"/api/messages">>, Headers, jiffy:encode(Msg)),
-    lager:warning("~p", [R]).
+    ?LOG_WARNING("~p", [R]).
 
 auth_header(Id) ->
     Password = <<"password_", (integer_to_binary(Id))/binary>>,

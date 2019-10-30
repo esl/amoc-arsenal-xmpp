@@ -12,6 +12,7 @@
 -module(mongoose_mam_read_and_send_msgs_with_metrics).
 
 -include_lib("exml/include/exml.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
@@ -142,10 +143,10 @@ read_messages_from_archive_since_timestamp(Client, Timestamp, Timeout) ->
                                                              Timestamp,
                                                              Timeout) of
         {timeout, What} ->
-            lager:warning("Failed to read archive timeout=~p", [What]),
+            ?LOG_WARNING("Failed to read archive timeout=~p", [What]),
             amoc_metrics:update_counter(?MAM_FAILED_LOOKUPS_CT, 1);
         {'EXIT', What} ->
-            lager:warning("Failed to read archive error=~p", [What]),
+            ?LOG_WARNING("Failed to read archive error=~p", [What]),
             amoc_metrics:update_counter(?MAM_FAILED_LOOKUPS_CT, 1);
         ResponseTimeMicros when is_integer(ResponseTimeMicros) ->
             amoc_metrics:update_time(?MAM_LOOKUP_RESP_TIME, ResponseTimeMicros),
@@ -174,12 +175,12 @@ do_read_messages_from_archive_since_timestamp(Client, Timestamp, Timeout) ->
         Timeout :: timer:time()) -> ok | no_return().
 receive_mam_messages_until_end(Client, Timeout) ->
     Stanza = escalus_connection:get_stanza(Client, mam_message_timeout, Timeout),
-    lager:debug("Stanza = ~p", [Stanza]),
+    ?LOG_DEBUG("Stanza = ~p", [Stanza]),
     case is_mam_archived_message(Stanza) of
         false ->
             maybe_mam_fin_message(Stanza, Client, Timeout);
         true ->
-            lager:debug("Received MAM archived message=~p", [Stanza]),
+            ?LOG_DEBUG("Received MAM archived message=~p", [Stanza]),
             receive_mam_messages_until_end(Client, Timeout)
     end.
 
@@ -190,10 +191,10 @@ receive_mam_messages_until_end(Client, Timeout) ->
 maybe_mam_fin_message(Stanza, Client, Timeout) ->
     case is_mam_fin_complete_message(Stanza) of
         true ->
-            lager:debug("Received MAM result stanza=~p", [Stanza]),
+            ?LOG_DEBUG("Received MAM result stanza=~p", [Stanza]),
             ok;
         false ->
-            lager:debug("Received stanza=~p when waiting for MAM archived message ~n", [Stanza]),
+            ?LOG_DEBUG("Received stanza=~p when waiting for MAM archived message ~n", [Stanza]),
             receive_mam_messages_until_end(Client, Timeout)
     end.
 

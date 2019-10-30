@@ -10,9 +10,11 @@
 -export([start/1]).
 -export([init/0]).
 
+-include_lib("kernel/include/logger.hrl").
+
 -spec init() -> ok.
 init() ->
-    lager:info("init the scenario").
+    ?LOG_INFO("init the scenario").
 
 -spec user_spec(binary(), binary(), binary()) -> escalus_users:user_spec().
 user_spec(ProfileId, XMPPToken, Res) ->
@@ -49,7 +51,7 @@ start(MyId) ->
     %escalus_connection:set_filter_predicate(Client, none),
 
     escalus_session:send_presence_available(Client),
-    lager:info("presence resp ~p", [escalus_client:wait_for_stanza(Client)]),
+    ?LOG_INFO("presence resp ~p", [escalus_client:wait_for_stanza(Client)]),
 
     timer:sleep(10000),
 
@@ -66,7 +68,7 @@ maybe_register(Cfg) ->
         undefined ->
             R = escalus_users:create_user(Cfg, {dummy, []}),
             erlang:put(registered, true),
-            lager:info("~p", [R]),
+            ?LOG_INFO("~p", [R]),
             ok;
         _ ->
             already_registered

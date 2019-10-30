@@ -13,6 +13,7 @@
 
 -include_lib("exml/include/exml.hrl").
 -include_lib("escalus/include/escalus.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -define(CHECKER_SESSIONS_INDICATOR, 10). %% How often a checker session should be generated
 -define(SLEEP_TIME_AFTER_SCENARIO, 0). %% wait 10s after scenario before disconnecting
@@ -31,7 +32,7 @@
 
 -spec init() -> ok.
 init() ->
-    lager:info("init metrics"),
+    ?LOG_INFO("init metrics"),
     amoc_metrics:init(counters, amoc_metrics:messages_spiral_name()),
     amoc_metrics:init(times, amoc_metrics:message_ttd_histogram_name()),
     amoc_metrics:init(counters, ?RECONNECTS_CT),
@@ -44,7 +45,7 @@ start(MyId) ->
     catch exit:shutdown ->
               exit(shutdown);
           Exit:Reason ->
-              lager:error("reconnection due to ~p ~p", [Exit, Reason]),
+              ?LOG_ERROR("reconnection due to ~p ~p", [Exit, Reason]),
               amoc_metrics:update_counter(?RECONNECTS_CT),
               timer:sleep(?SLEEP_TIME_BEFORE_RECONNECT),
               start(MyId)
@@ -75,7 +76,7 @@ do(false, MyId, Client) ->
                                                 MyId+?NUMBER_OF_NEXT_NEIGHBOURS)),
     send_messages_many_times(Client, ?SLEEP_TIME_AFTER_EVERY_MESSAGE, NeighbourIds);
 do(_Other, _MyId, Client) ->
-    lager:info("checker"),
+    ?LOG_INFO("checker"),
     send_presence_available(Client),
     escalus_connection:wait_forever(Client).
 

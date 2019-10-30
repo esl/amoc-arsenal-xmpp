@@ -12,6 +12,7 @@
 -module(mongoose_simple_with_metrics).
 
 -include_lib("exml/include/exml.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -define(CHECKER_SESSIONS_INDICATOR, 10). %% How often a checker session should be generated
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
@@ -27,7 +28,7 @@
 
 -spec init() -> ok.
 init() ->
-    lager:info("init metrics"),
+    ?LOG_INFO("init metrics"),
     amoc_metrics:init(counters, amoc_metrics:messages_spiral_name()),
     amoc_metrics:init(times, amoc_metrics:message_ttd_histogram_name()),
     ok.
@@ -55,7 +56,7 @@ do(false, MyId, Client) ->
                                                 MyId+?NUMBER_OF_NEXT_NEIGHBOURS)),
     send_messages_many_times(Client, ?SLEEP_TIME_AFTER_EVERY_MESSAGE, NeighbourIds);
 do(_Other, MyId, Client) ->
-    lager:info("checker ~p", [MyId]),
+    ?LOG_INFO("checker ~p", [MyId]),
     escalus_session:send_presence_available(Client),
     escalus_connection:wait_forever(Client).
 
