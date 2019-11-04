@@ -12,6 +12,7 @@
 -module(mongoose_docker_one_to_one).
 
 -include_lib("exml/include/exml.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
@@ -27,7 +28,7 @@
 
 -spec init() -> ok.
 init() ->
-    lager:info("init metrics"),
+    ?LOG_INFO("init metrics"),
     amoc_metrics:init(counters, amoc_metrics:messages_spiral_name()),
     amoc_metrics:init(times, amoc_metrics:message_ttd_histogram_name()),
     ok.

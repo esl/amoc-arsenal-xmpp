@@ -6,6 +6,7 @@
 
 -include_lib("escalus/include/escalus.hrl").
 -include_lib("exml/include/exml.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 
@@ -48,14 +49,14 @@ work_as_publisher(MyId, Client) ->
 
 publish_items_forever(Client, MyId, Node, ItemId) ->
     timer:sleep(?DELAY_BETWEEN_MESSAGES),
-    lager:debug("Publisher ~p publishing item ~p.", [MyId, ItemId]),
+    ?LOG_DEBUG("Publisher ~p publishing item ~p.", [MyId, ItemId]),
     publish(Client, integer_to_binary(ItemId), Node),
     publish_items_forever(Client, MyId, Node, ItemId + 1).
 
 work_as_subscriber(MyId, Client) ->
     Nodes = discover_nodes(Client),
     [subscribe(Client, Node) || Node <- Nodes],
-    lager:debug("Subscriber ~p subscribed to ~p nodes.", [MyId, length(Nodes)]),
+    ?LOG_DEBUG("Subscriber ~p subscribed to ~p nodes.", [MyId, length(Nodes)]),
     receive_messages_forever(MyId, Client).
 
 receive_messages_forever(MyId, Client) ->
@@ -67,7 +68,7 @@ receive_messages_forever(MyId, Client) ->
     receive_messages_forever(MyId, Client).
 
 verify_item_notification(MyId, Stanza) ->
-    lager:debug("Subscriber ~p got message.", [MyId]),
+    ?LOG_DEBUG("Subscriber ~p got message.", [MyId]),
     true = escalus_pred:is_stanza_from(?PUBSUB_ADDR, Stanza),
     true = escalus_pred:has_type(<<"headline">>, Stanza),
     ItemContent = item_content(),
@@ -78,7 +79,7 @@ verify_item_notification(MyId, Stanza) ->
     amoc_metrics:update_counter(?ITEMS_RECEIVED_CT, 1).
 
 verify_subscribe_response(MyId, Stanza) ->
-    lager:debug("Subscriber ~p got subscription response.", [MyId]),
+    ?LOG_DEBUG("Subscriber ~p got subscription response.", [MyId]),
     <<"subscribed">> = exml_query:path(Stanza, [{element, <<"pubsub">>},
                                                 {element, <<"subscription">>},
                                                 {attr, <<"subscription">>}]),

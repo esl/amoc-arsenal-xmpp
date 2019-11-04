@@ -6,10 +6,11 @@
          start/1]).
 
 -include_lib("exml/include/exml.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -spec init() -> ok.
 init() ->
-    lager:info("init the scenario"),
+    ?LOG_INFO("init the scenario"),
     amoc_metrics:init(counters, muc_rooms_created),
     amoc_metrics:init(counters, muc_occupants),
     amoc_metrics:init(counters, muc_messages_sent),
@@ -67,9 +68,9 @@ enter_room(Client, RoomJid) ->
     case room_entry_response_type(Resp) of
         created ->
             amoc_metrics:update_counter(muc_rooms_created),
-            lager:info("~s created room ~s", [Nick, RoomJid]);
+            ?LOG_INFO("~s created room ~s", [Nick, RoomJid]);
         joined ->
-            lager:info("~s joined room ~s", [Nick, RoomJid])
+            ?LOG_INFO("~s joined room ~s", [Nick, RoomJid])
     end,
     amoc_metrics:update_counter(muc_occupants).
 
@@ -142,7 +143,7 @@ received_stanza_handlers() ->
                 amoc_metrics:update_time(muc_message_ttd, ttd(Stanza, Metadata))
         end},
        {fun(_) -> true end,
-        fun(_, Stanza) -> lager:warning("Skipping received stanza ~p", [Stanza]) end}]).
+        fun(_, Stanza) -> ?LOG_WARNING("Skipping received stanza ~p", [Stanza]) end}]).
 
 %% Predicates
 

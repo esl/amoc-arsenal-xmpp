@@ -5,6 +5,7 @@
 -include_lib("exml/include/exml.hrl").
 -include_lib("escalus/include/escalus.hrl").
 -include_lib("escalus/include/escalus_xmlns.hrl").
+-include_lib("kernel/include/logger.hrl").
 
 -required_variable({'IQ_TIMEOUT',             <<"IQ timeout (milliseconds, def: 10000ms)"/utf8>>}).
 -required_variable({'ROOM_CREATION_RATE',     <<"Rate of room creations (per minute, def:600)">>}).
@@ -142,7 +143,7 @@ pids(PidsAndClients) ->
 node_activate_users(Settings, Pids, ActivationPolicy) ->
     case get_parameter(node_activation_policy, Settings) of
         ActivationPolicy ->
-            lager:debug("Node activate users running. Policy ~p. Pids: ~p", [ActivationPolicy, Pids]),
+            ?LOG_DEBUG("Node activate users running. Policy ~p. Pids: ~p", [ActivationPolicy, Pids]),
             [schedule_node_publishing(Pid) || Pid <- Pids];
         _ -> ok
     end.
@@ -150,7 +151,7 @@ node_activate_users(Settings, Pids, ActivationPolicy) ->
 room_activate_users(Settings, Pids, ActivationPolicy) ->
     case get_parameter(room_activation_policy, Settings) of
         ActivationPolicy ->
-            lager:debug("Room activate users running. Policy ~p. Pids: ~p", [ActivationPolicy, Pids]),
+            ?LOG_DEBUG("Room activate users running. Policy ~p. Pids: ~p", [ActivationPolicy, Pids]),
             [schedule_room_publishing(Pid) || Pid <- Pids];
         _ -> ok
     end.
@@ -159,7 +160,7 @@ activate_removal(Pids) ->
     [schedule_removal(Pid) || Pid <- Pids].
 
 make_all_clients_friends(Clients) ->
-    lager:debug("Make all clients friends."),
+    ?LOG_DEBUG("Make all clients friends."),
     escalus_utils:distinct_pairs(
         fun(C1, C2) ->
             send_presence(C1, <<"subscribe">>, C2),
@@ -180,10 +181,10 @@ schedule_removal(Pid) ->
 %% User
 %%------------------------------------------------------------------------------------------------
 start_user(Client) ->
-    lager:debug("User process ~p", [self()]),
+    ?LOG_DEBUG("User process ~p", [self()]),
     erlang:monitor(process, Client#client.rcv_pid),
     create_new_node(Client),
-    lager:debug("Node created User process ~p", [self()]),
+    ?LOG_DEBUG("Node created User process ~p", [self()]),
     send_presence_with_caps(Client),
     escalus_tcp:set_active(Client#client.rcv_pid, true),
     {TS, Id} = request_muc_light_room(Client),
@@ -208,7 +209,7 @@ user_loop(Client, Requests) ->
             {TS, Id} = add_users_to_room(Client, MemberJids),
             user_loop(Client, Requests#{Id=>{new, TS}});
         remove_user ->
-            lager:debug("GDPR: Removing myself ~p (~p)", [escalus_client:short_jid(Client), self()]),
+            ?LOG_DEBUG("GDPR: Removing myself ~p (~p)", [escalus_client:short_jid(Client), self()]),
             remove_self(Client);
         {stanza, _, #xmlel{name = <<"message">>} = Stanza, #{recv_timestamp := RecvTimeStamp}} ->
             process_message(Stanza, RecvTimeStamp),
@@ -220,9 +221,9 @@ user_loop(Client, Requests) ->
             process_presence(Client, Stanza),
             user_loop(Client, Requests);
         {'DOWN', _, process, Pid, Info} when Pid =:= Client#client.rcv_pid ->
-            lager:error("TCP connection process ~p down: ~p", [Pid, Info]);
+            ?LOG_ERROR("TCP connection process ~p down: ~p", [Pid, Info]);
         Msg ->
-            lager:error("unexpected message ~p", [Msg])
+            ?LOG_ERROR("unexpected message ~p", [Msg])
     after IqTimeout ->
         user_loop(Client, verify_request(Requests))
     end.
@@ -248,7 +249,7 @@ update_timeout_metrics(<<"affiliation", _/binary>>) ->
 update_timeout_metrics(?ROOM_CREATION_ID) ->
     amoc_metrics:update_counter(room_creation_timeout);
 update_timeout_metrics(Id) ->
-    lager:error("unknown iq id ~p", Id).
+    ?LOG_ERROR("unknown iq id ~p", Id).
 
 schedule_room_publishing(Pid) ->
     amoc_throttle:send(?ROOM_PUBLICATION_THROTTLING, Pid, {publish_item_room, undefined}).
@@ -313,16 +314,16 @@ create_pubsub_node(Client) ->
 
     case {escalus_pred:is_iq_result(Request, CreateNodeResult), CreateNodeResult} of
         {true, _} ->
-%%            lager:debug("node creation ~p (~p)", [?NODE, self()]),
+%%            ?LOG_DEBUG("node creation ~p (~p)", [?NODE, self()]),
             amoc_metrics:update_counter(node_creation_success),
             amoc_metrics:update_time(node_creation, CreateNodeTime);
         {false, {'EXIT', {timeout_when_waiting_for_stanza, _}}} ->
             amoc_metrics:update_counter(node_creation_timeout),
-            lager:error("Timeout creating node: ~p", [CreateNodeResult]),
+            ?LOG_ERROR("Timeout creating node: ~p", [CreateNodeResult]),
             exit(node_creation_timeout);
         {false, _} ->
             amoc_metrics:update_counter(node_creation_failure),
-            lager:error("Error creating node: ~p", [CreateNodeResult]),
+            ?LOG_ERROR("Error creating node: ~p", [CreateNodeResult]),
             exit(node_creation_failed)
     end.
 
@@ -337,7 +338,7 @@ send_presence(From, Type, To) ->
     escalus_client:send(From, Presence).
 
 send_presence_with_caps(Client) ->
-    lager:debug("Send presence with caps ~p, (~p).", [escalus_client:short_jid(Client), self()]),
+    ?LOG_DEBUG("Send presence with caps ~p, (~p).", [escalus_client:short_jid(Client), self()]),
     Presence = escalus_stanza:presence(<<"available">>, [caps()]),
     escalus:send(Client, Presence).
 
@@ -373,7 +374,7 @@ add_users_to_room(Client, Jids) ->
         children = [#xmlcdata{content = Jid}]} || Jid <- Jids],
     AffChangeStanza = escalus_stanza:iq_set(?NS_MUC_LIGHT_AFFILIATIONS, AffList),
     AffChangeStanzaWithId = escalus_stanza:set_id(AffChangeStanza, Id),
-    lager:debug("Adding users to room: ~p", [Jids]),
+    ?LOG_DEBUG("Adding users to room: ~p", [Jids]),
     escalus:send(Client, escalus_stanza:to(AffChangeStanzaWithId, RoomJid)),
     {os:system_time(microsecond), Id}.
 
@@ -440,7 +441,7 @@ process_pubsub_msg(#xmlel{name = <<"message">>} = Stanza, TS) ->
             TimeStampBin = exml_query:attr(Entry, <<"timestamp">>),
             TimeStamp = binary_to_integer(TimeStampBin),
             TTD = TS - TimeStamp,
-%%            lager:debug("pubsub time to delivery ~p", [TTD]),
+%%            ?LOG_DEBUG("pubsub time to delivery ~p", [TTD]),
             amoc_metrics:update_counter(pubsub_message),
             amoc_metrics:update_time(pubsub_message_ttd, TTD)
     end.
@@ -452,7 +453,7 @@ process_muc_light_message(Stanza, RecvTimeStamp) ->
         #xmlel{name = <<"x">>, attrs = [{<<"xmlns">>, ?NS_MUC_LIGHT_AFFILIATIONS}], children = _} ->
             handle_muc_light_affiliation_message(Stanza),
             amoc_metrics:update_counter(muc_light_affiliation_change_messages);
-        _ -> lager:error("Unknown message.")
+        _ -> ?LOG_ERROR("Unknown message.")
     end.
 
 handle_normal_muc_light_message(Stanza, RecvTimeStamp) ->
@@ -468,7 +469,7 @@ handle_normal_muc_light_message(Stanza, RecvTimeStamp) ->
     end,
 
     TTD = RecvTimeStamp - ReqTimeStamp,
-%%    lager:debug("muc light time to delivery ~p", [TTD]),
+%%    ?LOG_DEBUG("muc light time to delivery ~p", [TTD]),
     amoc_metrics:update_counter(muc_light_message),
     amoc_metrics:update_time(muc_light_ttd, TTD).
 
@@ -517,18 +518,18 @@ process_iq(Client, #xmlel{name = <<"iq">>} = Stanza, TS, Requests) ->
         {<<"set">>, ?NS_ROSTER, _, undefined} ->
             ok; %%it's ok to just ignore roster pushes
         {_, undefined, <<"publish", _/binary>>, undefined} ->
-            lager:warning("unknown publish iq ~p", [Stanza]);
+            ?LOG_WARNING("unknown publish iq ~p", [Stanza]);
         {_, undefined, <<"publish", _/binary>>, {Tag, ReqTS}} ->
             handle_publish_resp(Stanza, {Tag, TS - ReqTS});
         _ ->
-            lager:warning("unexpected iq ~p", [Stanza])
+            ?LOG_WARNING("unexpected iq ~p", [Stanza])
     end,
     maps:remove(Id, Requests).
 
 handle_muc_light_room_iq_result(CreateRoomResult, {Tag, RoomCreationTime}) ->
     case {escalus_pred:is_iq_result(CreateRoomResult), CreateRoomResult} of
         {true, _} ->
-            lager:debug("Room creation ~p took ~p", [self(), RoomCreationTime]),
+            ?LOG_DEBUG("Room creation ~p took ~p", [self(), RoomCreationTime]),
             amoc_metrics:update_time(room_creation, RoomCreationTime),
             IqTimeout = get_parameter(iq_timeout),
             case Tag of
@@ -540,18 +541,18 @@ handle_muc_light_room_iq_result(CreateRoomResult, {Tag, RoomCreationTime}) ->
             end;
         {false, _} ->
             amoc_metrics:update_counter(room_creation_failure),
-            lager:error("Error creating room: ~p", [CreateRoomResult]),
+            ?LOG_ERROR("Error creating room: ~p", [CreateRoomResult]),
             exit(room_creation_failed)
     end.
 
 send_info_to_coordinator(Client) ->
-    lager:debug("Process ~p, sending info about myself to coordinator", [self()]),
+    ?LOG_DEBUG("Process ~p, sending info about myself to coordinator", [self()]),
     amoc_coordinator:add(?MODULE, Client).
 
 handle_affiliation_change_iq(AffiliationChangeResult, {Tag, AffiliationChangeTime}) ->
     case {escalus_pred:is_iq_result(AffiliationChangeResult), AffiliationChangeResult} of
         {true, _} ->
-            lager:debug("Room creation ~p took ~p", [self(), AffiliationChangeTime]),
+            ?LOG_DEBUG("Room creation ~p took ~p", [self(), AffiliationChangeTime]),
             amoc_metrics:update_time(room_affiliation_change, AffiliationChangeTime),
             IqTimeout = get_parameter(iq_timeout),
             case Tag of
@@ -563,7 +564,7 @@ handle_affiliation_change_iq(AffiliationChangeResult, {Tag, AffiliationChangeTim
             end;
         {false, _} ->
             amoc_metrics:update_counter(room_affiliation_change_failure),
-            lager:error("Error affiliation change: ~p", [AffiliationChangeTime]),
+            ?LOG_ERROR("Error affiliation change: ~p", [AffiliationChangeTime]),
             exit(affiliation_change_timeout)
     end.
 
@@ -582,13 +583,13 @@ handle_publish_resp(PublishResult, {Tag, PublishTime}) ->
             end;
         _ ->
             amoc_metrics:update_counter(publication_error),
-            lager:error("Error publishing failed: ~p", [PublishResult]),
+            ?LOG_ERROR("Error publishing failed: ~p", [PublishResult]),
             exit(publication_failed)
     end.
 
 
 handle_disco_query(Client, DiscoRequest) ->
-    lager:debug("handle_disco_query ~p", [self()]),
+    ?LOG_DEBUG("handle_disco_query ~p", [self()]),
     QueryEl = escalus_stanza:query_el(<<"http://jabber.org/protocol/disco#info">>,
         feature_elems()),
     DiscoResult = escalus_stanza:iq_result(DiscoRequest, [QueryEl]),
@@ -630,7 +631,7 @@ get_sender_bare_jid(Stanza) ->
 %% Config helpers
 %%------------------------------------------------------------------------------------------------
 dump_settings(Settings) ->
-    lager:info("scenario settings: ~p", [Settings]).
+    ?LOG_INFO("scenario settings: ~p", [Settings]).
 
 store_scenario_settings(Settings) ->
     erlang:put(scenario_settings, Settings).
@@ -638,12 +639,12 @@ store_scenario_settings(Settings) ->
 get_parameter(Name) ->
     case erlang:get(scenario_settings) of
         undefined ->
-            lager:error("get_parameter/1 failed, no scenario settings"),
+            ?LOG_ERROR("get_parameter/1 failed, no scenario settings"),
             exit(no_settings);
         Settings ->
             case amoc_config:get_scenario_parameter(Name, Settings) of
                 {error, no_parameter} ->
-                    lager:error("get_parameter/1 failed, no such parameter"),
+                    ?LOG_ERROR("get_parameter/1 failed, no such parameter"),
                     exit(no_parameter);
                 {ok, Value} -> Value
             end
@@ -652,7 +653,7 @@ get_parameter(Name) ->
 get_parameter(Name, Settings) ->
     case amoc_config:get_scenario_parameter(Name, Settings) of
         {error, no_parameter} ->
-            lager:error("get_parameter/2 failed, no such parameter"),
+            ?LOG_ERROR("get_parameter/2 failed, no such parameter"),
             exit(no_parameter);
         {ok, Value} -> Value
     end.

@@ -13,9 +13,11 @@
 
 -type binjid() :: binary().
 
+-include_lib("kernel/include/logger.hrl").
+
 -spec init() -> ok.
 init() ->
-    lager:info("init the scenario"),
+    ?LOG_INFO("init the scenario"),
     ok.
 
 -spec user_spec(binary(), binary(), binary()) -> escalus_users:user_spec().
@@ -50,7 +52,7 @@ start(MyId) ->
     %escalus_connection:set_filter_predicate(Client, none),
 
     send_presence_available(Client),
-    lager:info("presence resp ~p", [escalus_client:wait_for_stanza(Client)]),
+    ?LOG_INFO("presence resp ~p", [escalus_client:wait_for_stanza(Client)]),
     timer:sleep(5000),
 
     NeighbourIds = lists:delete(MyId, lists:seq(max(1,MyId-4),MyId+4)),

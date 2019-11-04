@@ -13,9 +13,11 @@
 
 -type transport() :: tcp | bosh | ws.
 
+-include_lib("kernel/include/logger.hrl").
+
 -spec init() -> ok.
 init() ->
-    lager:info("init the scenario").
+    ?LOG_INFO("init the scenario").
 
 -spec start(amoc_scenario:user_id()) -> any().
 start(MyId) ->
@@ -33,7 +35,7 @@ start(MyId) ->
 
     escalus_session:send_presence_available(Client),
 
-    lager:info("~p presence resp ~p", [Transport, escalus_client:wait_for_stanza(Client)]),
+    ?LOG_INFO("~p presence resp ~p", [Transport, escalus_client:wait_for_stanza(Client)]),
     timer:sleep(5000),
 
     NeighbourIds = lists:delete(MyId, lists:seq(max(1,MyId-4),MyId+4)),
