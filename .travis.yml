@@ -18,8 +18,8 @@ install: rebar3 compile
 script:
   - rebar3 xref
   - rebar3 dialyzer
-  - OTP_VSN=${TRAVIS_OTP_RELEASE}-1 ./build_docker_image.sh
-  - ./test_docker_image.sh
+  - ./travis/build_docker_image.sh
+  - ./travis/test_docker_image.sh
 
 cache:
   directories:
