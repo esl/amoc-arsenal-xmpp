@@ -29,8 +29,8 @@
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init metrics"),
-    amoc_metrics:init(counters, amoc_metrics:messages_spiral_name()),
-    amoc_metrics:init(times, amoc_metrics:message_ttd_histogram_name()),
+    amoc_metrics:init(counters, amoc_config:get(messages_spiral_name)),
+    amoc_metrics:init(times, amoc_config:get(message_ttd_histogram_name)),
     ok.
 
 -spec start(amoc_scenario:user_id()) -> any().
