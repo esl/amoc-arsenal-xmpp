@@ -28,20 +28,18 @@ MAINTAINER Erlang Solutions <mongoose-im@erlang-solutions.com>
 ARG vsn
 ARG amoc_arsenal_home=/home/amoc/amoc_arsenal_xmpp
 
-ENV EXEC_PATH ${amoc_arsenal_home}/bin/amoc_arsenal_xmpp
 
 RUN useradd -ms /bin/bash amoc
 
 RUN mkdir ${amoc_arsenal_home}
 COPY --from=builder amoc_arsenal_build/_build/default/rel/amoc_arsenal_xmpp/ ${amoc_arsenal_home}
-# It seems hub.docker.com does not support --chown param to COPY directive
 RUN chown -R amoc:amoc ${amoc_arsenal_home}
 
 EXPOSE 4000
 
 RUN mkdir /etc/service/amoc
+## this env is required for amoc.sh script
+ENV EXEC_PATH ${amoc_arsenal_home}/bin/amoc_arsenal_xmpp
 COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/docker/amoc.sh /etc/service/amoc/run
-COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/priv/vm.args /home/amoc/amoc_arsenal_xmpp/releases/${vsn}/vm.args
-COPY --from=builder amoc_arsenal_build/_build/default/lib/amoc/docker/run.sh /run.sh
 
-CMD ["/run.sh"]
+CMD ["/sbin/my_init"]
