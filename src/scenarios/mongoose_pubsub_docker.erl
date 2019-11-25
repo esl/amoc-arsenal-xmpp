@@ -4,13 +4,15 @@
 %%==============================================================================
 -module(mongoose_pubsub_docker).
 
+-behaviour(amoc_scenario).
+
 -include_lib("escalus/include/escalus.hrl").
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--define(HOST, <<"localhost">>). %% The virtual host served by the server
+-include("generic_required_variables.hrl").
 
--behaviour(amoc_scenario).
+-define(HOST, <<"localhost">>). %% The virtual host served by the server
 
 -export([init/0, start/1]).
 

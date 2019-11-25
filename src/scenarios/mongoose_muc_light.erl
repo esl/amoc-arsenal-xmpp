@@ -8,6 +8,8 @@
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
+-include("generic_required_variables.hrl").
+
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init the scenario"),

@@ -1,11 +1,13 @@
 -module(simple_rest_api).
 
--behavior(amoc_scenario).
+-behaviour(amoc_scenario).
 
 -export([start/1]).
 -export([init/0]).
 
 -include_lib("kernel/include/logger.hrl").
+
+-include("generic_required_variables.hrl").
 
 -spec init() -> ok.
 init() ->

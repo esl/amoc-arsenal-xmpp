@@ -4,9 +4,9 @@
 %%==============================================================================
 -module(mongoose_simple).
 
--define(HOST, <<"localhost">>).
-
 -behaviour(amoc_scenario).
+
+-define(HOST, <<"localhost">>).
 
 -export([start/1]).
 -export([init/0]).
@@ -14,6 +14,8 @@
 -type binjid() :: binary().
 
 -include_lib("kernel/include/logger.hrl").
+
+-include("generic_required_variables.hrl").
 
 -spec init() -> ok.
 init() ->

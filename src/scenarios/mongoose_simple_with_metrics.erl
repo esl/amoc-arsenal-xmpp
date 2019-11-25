@@ -11,8 +11,12 @@
 %%==============================================================================
 -module(mongoose_simple_with_metrics).
 
+-behaviour(amoc_scenario).
+
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
+
+-include("generic_required_variables.hrl").
 
 -define(CHECKER_SESSIONS_INDICATOR, 10). %% How often a checker session should be generated
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
@@ -20,8 +24,6 @@
 -define(NUMBER_OF_NEXT_NEIGHBOURS, 4).
 -define(NUMBER_OF_SEND_MESSAGE_REPEATS, 73).
 -define(SLEEP_TIME_AFTER_EVERY_MESSAGE, 20000).
-
--behaviour(amoc_scenario).
 
 -export([start/1]).
 -export([init/0]).

@@ -1,41 +1,27 @@
 -module(gdpr_removal).
 
--behavior(amoc_scenario).
+-behaviour(amoc_scenario).
 
 -include_lib("exml/include/exml.hrl").
 -include_lib("escalus/include/escalus.hrl").
 -include_lib("escalus/include/escalus_xmlns.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--required_variable({'IQ_TIMEOUT',             <<"IQ timeout (milliseconds, def: 10000ms)"/utf8>>}).
--required_variable({'ROOM_CREATION_RATE',     <<"Rate of room creations (per minute, def:600)">>}).
--required_variable({'NODE_CREATION_RATE',     <<"Rate of node creations (per minute, def:600)">>}).
--required_variable({'ROOM_PUBLICATION_RATE',  <<"Rate of publications to room (per minute, def:1500)">>}).
--required_variable({'NODE_PUBLICATION_RATE',  <<"Rate of publications to PEP node (per minute, def:1500)">>}).
--required_variable({'ROOM_SIZE',              <<"Number of users in a room.">>}).
--required_variable({'N_OF_SUBSCRIBERS',       <<"Number of subscriptions for each node (def: 50)"/utf8>>}).
--required_variable({'ROOM_ACTIVATION_POLICY', <<"Publish after setup of (def: all_rooms | n_sers)"/utf8>>}).
--required_variable({'NODE_ACTIVATION_POLICY', <<"Publish after setup of (def: all_nodes | n_nodes)"/utf8>>}).
--required_variable({'GDPR_REMOVAL_RATE',      <<"Rate of user removals (per minute, def:1)">>}).
--required_variable({'PUBLICATION_SIZE',       <<"Size of additional payload (bytes, def:300)">>}).
--required_variable({'MIM_HOST',               <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>}).
--required_variable({'MUC_HOST',               <<"The virtual MUC host served by the server (def: <<\"muclight.localhost\">>)"/utf8>>}).
+-include("generic_required_variables.hrl").
 
--define(ALL_PARAMETERS, [
-    {iq_timeout,                  10000, positive_integer},
-    {room_creation_rate,            600, positive_integer},
-    {node_creation_rate,            600, positive_integer},
-    {room_publication_rate,        1500, positive_integer},
-    {node_publication_rate,        1500, positive_integer},
-    {room_size,                      10, positive_integer},
-    {n_of_subscribers,               50, nonnegative_integer},
-    {room_activation_policy,  all_rooms, [all_rooms, n_rooms]},
-    {node_activation_policy,  all_nodes, [all_nodes, n_nodes]},
-    {gdpr_removal_rate,               2, positive_integer},
-    {publication_size,              300, nonnegative_integer},
-    {mim_host,          <<"localhost">>, bitstring},
-    {muc_host, <<"muclight.localhost">>, bitstring}
-]).
+-required_variable({iq_timeout,             <<"IQ timeout (milliseconds, def: 10000ms)"/utf8>>,                                     10000,                    positive_integer}).
+-required_variable({room_creation_rate,     <<"Rate of room creations (per minute, def:600)">>,                                     600,                      positive_integer}).
+-required_variable({node_creation_rate,     <<"Rate of node creations (per minute, def:600)">>,                                     600,                      positive_integer}).
+-required_variable({room_publication_rate,  <<"Rate of publications to room (per minute, def:1500)">>,                              1500,                     positive_integer}).
+-required_variable({node_publication_rate,  <<"Rate of publications to PEP node (per minute, def:1500)">>,                          1500,                     positive_integer}).
+-required_variable({room_size,              <<"Number of users in a room.">>,                                                       10,                       positive_integer}).
+-required_variable({n_of_subscribers,       <<"Number of subscriptions for each node (def: 50)"/utf8>>,                             50,                       nonnegative_integer}).
+-required_variable({room_activation_policy, <<"Publish after setup of (def: all_rooms | n_sers)"/utf8>>,                            all_rooms,                [all_rooms, n_rooms]}).
+-required_variable({node_activation_policy, <<"Publish after setup of (def: all_nodes | n_nodes)"/utf8>>,                           all_nodes,                [all_nodes, n_nodes]}).
+-required_variable({gdpr_removal_rate,      <<"Rate of user removals (per minute, def:1)">>,                                        2,                        positive_integer}).
+-required_variable({publication_size,       <<"Size of additional payload (bytes, def:300)">>,                                      300,                      nonnegative_integer}).
+-required_variable({mim_host,               <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>,              <<"localhost">>,          bitstring}).
+-required_variable({muc_host,               <<"The virtual MUC host served by the server (def: <<\"muclight.localhost\">>)"/utf8>>, <<"muclight.localhost">>, bitstring}).
 
 -define(ROOM_CREATION_THROTTLING, room_creation).
 -define(NODE_CREATION_THROTTLING, node_creation).
@@ -53,36 +39,29 @@
 -define(NS_MUC_LIGHT_AFFILIATIONS, <<"urn:xmpp:muclight:0#affiliations">>).
 -define(NS_MUC_LIGHT_CREATION, <<"urn:xmpp:muclight:0#create">>).
 
--export([init/0, start/2]).
+-export([init/0, start/1]).
 
--spec init() -> {ok, amoc_scenario:state()} | {error, Reason :: term()}.
+-spec init() -> ok.
 init() ->
     init_metrics(),
-    case amoc_config:parse_scenario_settings(?ALL_PARAMETERS) of
-        {ok, Settings} ->
-            http_req:start(),
+    http_req:start(),
 
-            dump_settings(Settings),
+    [RoomPublicationRate, NodePublicationRate, RoomCreationRate, NodeCreationRate, GDPRRemovalRate] =
+    [amoc_config:get(Key) ||
+     Key <- [room_publication_rate, node_publication_rate,
+             room_creation_rate, node_creation_rate,
+             gdpr_removal_rate]],
+    amoc_throttle:start(?ROOM_CREATION_THROTTLING, RoomCreationRate),
+    amoc_throttle:start(?ROOM_PUBLICATION_THROTTLING, RoomPublicationRate),
+    amoc_throttle:start(?NODE_CREATION_THROTTLING, NodeCreationRate),
+    amoc_throttle:start(?NODE_PUBLICATION_THROTTLING, NodePublicationRate),
+    amoc_throttle:start(?REMOVAL_THROTTLING, GDPRRemovalRate),
 
-            [RoomPublicationRate, NodePublicationRate, RoomCreationRate, NodeCreationRate, GDPRRemovalRate] =
-                [get_parameter(Key, Settings) ||
-                    Key <- [room_publication_rate, node_publication_rate,
-                            room_creation_rate, node_creation_rate,
-                            gdpr_removal_rate]],
-            amoc_throttle:start(?ROOM_CREATION_THROTTLING, RoomCreationRate),
-            amoc_throttle:start(?ROOM_PUBLICATION_THROTTLING, RoomPublicationRate),
-            amoc_throttle:start(?NODE_CREATION_THROTTLING, NodeCreationRate),
-            amoc_throttle:start(?NODE_PUBLICATION_THROTTLING, NodePublicationRate),
-            amoc_throttle:start(?REMOVAL_THROTTLING, GDPRRemovalRate),
+    start_coordinator(),
+    ok.
 
-            start_coordinator(Settings),
-            {ok, Settings};
-        Error -> Error
-    end.
-
--spec start(amoc_scenario:user_id(), amoc_scenario:state()) -> any().
-start(Id, Settings) ->
-    store_scenario_settings(Settings),
+-spec start(amoc_scenario:user_id()) -> any().
+start(Id) ->
     Client = connect_amoc_user(Id),
     start_user(Client).
 
@@ -110,25 +89,25 @@ init_metrics() ->
 %%------------------------------------------------------------------------------------------------
 %% Coordinator
 %%------------------------------------------------------------------------------------------------
-start_coordinator(Settings) ->
-    Plan = get_plan(Settings),
+start_coordinator() ->
+    Plan = get_plan(),
     amoc_coordinator:start(?MODULE, Plan).
 
-get_plan(Settings) ->
-    [{get_parameter(room_size, Settings),
+get_plan() ->
+    [{amoc_config:get(room_size),
       fun(_, PidsAndClients) ->
           make_full_rooms(PidsAndClients),
-          room_activate_users(Settings, pids(PidsAndClients), n_rooms)
+          room_activate_users(pids(PidsAndClients), n_rooms)
       end},
-     {get_parameter(n_of_subscribers, Settings),
+     {amoc_config:get(n_of_subscribers),
       fun(_, PidsAndClients) ->
           make_all_clients_friends(clients(PidsAndClients)),
-          node_activate_users(Settings, pids(PidsAndClients), n_nodes)
+          node_activate_users(pids(PidsAndClients), n_nodes)
       end},
      {all,
       fun(_, PidsAndClients) ->
-          room_activate_users(Settings, pids(PidsAndClients), all_rooms),
-          node_activate_users(Settings, pids(PidsAndClients), all_nodes),
+          room_activate_users(pids(PidsAndClients), all_rooms),
+          node_activate_users(pids(PidsAndClients), all_nodes),
           activate_removal(pids(PidsAndClients))
       end}].
 
@@ -140,16 +119,16 @@ pids(PidsAndClients) ->
     {Pids, _Clients} = lists:unzip(PidsAndClients),
     Pids.
 
-node_activate_users(Settings, Pids, ActivationPolicy) ->
-    case get_parameter(node_activation_policy, Settings) of
+node_activate_users(Pids, ActivationPolicy) ->
+    case amoc_config:get(node_activation_policy) of
         ActivationPolicy ->
             ?LOG_DEBUG("Node activate users running. Policy ~p. Pids: ~p", [ActivationPolicy, Pids]),
             [schedule_node_publishing(Pid) || Pid <- Pids];
         _ -> ok
     end.
 
-room_activate_users(Settings, Pids, ActivationPolicy) ->
-    case get_parameter(room_activation_policy, Settings) of
+room_activate_users(Pids, ActivationPolicy) ->
+    case amoc_config:get(room_activation_policy) of
         ActivationPolicy ->
             ?LOG_DEBUG("Room activate users running. Policy ~p. Pids: ~p", [ActivationPolicy, Pids]),
             [schedule_room_publishing(Pid) || Pid <- Pids];
@@ -195,7 +174,7 @@ create_new_node(Client) ->
     create_pubsub_node(Client).
 
 user_loop(Client, Requests) ->
-    IqTimeout = get_parameter(iq_timeout),
+    IqTimeout = amoc_config:get(iq_timeout),
     receive
         {publish_item_room, RoomJid} ->
             amoc_metrics:update_counter(muc_light_message_sent),
@@ -229,7 +208,7 @@ user_loop(Client, Requests) ->
     end.
 
 verify_request(Requests) ->
-    IqTimeout = get_parameter(iq_timeout),
+    IqTimeout = amoc_config:get(iq_timeout),
     Now = os:system_time(microsecond),
     VerifyFN =
         fun(Key, Value) ->
@@ -261,7 +240,7 @@ schedule_node_publishing(Pid) ->
 
 remove_self(Client) ->
     %TODO when running with clt-swarm make sure to use correct cfg, change ports here etc.
-    Path = list_to_binary(["/api/users/", get_parameter(mim_host), "/", escalus_client:username(Client)]),
+    Path = list_to_binary(["/api/users/", amoc_config:get(mim_host), "/", escalus_client:username(Client)]),
 
     {RemovalTime, {ok, _}} = timer:tc(fun() -> http_req:request("http://localhost:8088", Path, <<"DELETE">>, []) end),
 
@@ -286,7 +265,7 @@ make_user_cfg(Id) ->
     Resource = <<"res1">>,
     ConnectionDetails = amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]),
     [{username, Username},
-        {server, get_parameter(mim_host)},
+        {server, amoc_config:get(mim_host)},
         {resource, Resource},
         {password, Password},
         {carbons, false},
@@ -309,7 +288,7 @@ create_pubsub_node(Client) ->
 
     {CreateNodeTime, CreateNodeResult} = timer:tc(
         fun() ->
-            catch escalus:wait_for_stanza(Client, get_parameter(iq_timeout))
+            catch escalus:wait_for_stanza(Client, amoc_config:get(iq_timeout))
         end),
 
     case {escalus_pred:is_iq_result(Request, CreateNodeResult), CreateNodeResult} of
@@ -355,7 +334,7 @@ caps() ->
 request_muc_light_room(Client) ->
     amoc_throttle:send_and_wait(?ROOM_CREATION_THROTTLING, create_room),
     Id = ?ROOM_CREATION_ID,
-    MucHost = get_parameter(muc_host),
+    MucHost = amoc_config:get(muc_host),
     CreateRoomStanza = escalus_stanza:iq_set(?NS_MUC_LIGHT_CREATION, []),
     CreateRoomStanzaWithTo = escalus_stanza:to(CreateRoomStanza, MucHost),
     CreateRoomStanzaWithId = escalus_stanza:set_id(CreateRoomStanzaWithTo, Id),
@@ -385,7 +364,7 @@ send_message_to_room(Client, undefined) ->
     RoomJid = erlang:get(my_room),
     send_message_to_room(Client, RoomJid);
 send_message_to_room(Client, RoomJid) ->
-    PayloadSize = get_parameter(publication_size),
+    PayloadSize = amoc_config:get(publication_size),
     MessageBody = item_content(PayloadSize),
     Message = #xmlel{name = <<"message">>,
         attrs = [{<<"to">>, RoomJid},
@@ -399,7 +378,7 @@ send_message_to_room(Client, RoomJid) ->
 
 publish_pubsub_item(Client) ->
     Id = iq_id(publish, Client),
-    PayloadSize = get_parameter(publication_size),
+    PayloadSize = amoc_config:get(publication_size),
     Content = item_content(PayloadSize),
     Request = publish_pubsub_stanza(Client, Id, Content),
     escalus:send(Client, Request),
@@ -531,7 +510,7 @@ handle_muc_light_room_iq_result(CreateRoomResult, {Tag, RoomCreationTime}) ->
         {true, _} ->
             ?LOG_DEBUG("Room creation ~p took ~p", [self(), RoomCreationTime]),
             amoc_metrics:update_time(room_creation, RoomCreationTime),
-            IqTimeout = get_parameter(iq_timeout),
+            IqTimeout = amoc_config:get(iq_timeout),
             case Tag of
                 new when IqTimeout * 1000 > RoomCreationTime ->
                     amoc_metrics:update_counter(room_creation_success);
@@ -554,7 +533,7 @@ handle_affiliation_change_iq(AffiliationChangeResult, {Tag, AffiliationChangeTim
         {true, _} ->
             ?LOG_DEBUG("Room creation ~p took ~p", [self(), AffiliationChangeTime]),
             amoc_metrics:update_time(room_affiliation_change, AffiliationChangeTime),
-            IqTimeout = get_parameter(iq_timeout),
+            IqTimeout = amoc_config:get(iq_timeout),
             case Tag of
                 new when IqTimeout * 1000 > AffiliationChangeTime ->
                     amoc_metrics:update_counter(room_affiliation_change_success);
@@ -569,7 +548,7 @@ handle_affiliation_change_iq(AffiliationChangeResult, {Tag, AffiliationChangeTim
     end.
 
 handle_publish_resp(PublishResult, {Tag, PublishTime}) ->
-    IqTimeout = get_parameter(iq_timeout),
+    IqTimeout = amoc_config:get(iq_timeout),
     case escalus_pred:is_iq_result(PublishResult) of
         true ->
             amoc_metrics:update_counter(publication_result),
@@ -627,33 +606,3 @@ get_sender_bare_jid(Stanza) ->
     [BareJid | _] = binary:split(From, <<"/">>),
     BareJid.
 
-%%------------------------------------------------------------------------------------------------
-%% Config helpers
-%%------------------------------------------------------------------------------------------------
-dump_settings(Settings) ->
-    ?LOG_INFO("scenario settings: ~p", [Settings]).
-
-store_scenario_settings(Settings) ->
-    erlang:put(scenario_settings, Settings).
-
-get_parameter(Name) ->
-    case erlang:get(scenario_settings) of
-        undefined ->
-            ?LOG_ERROR("get_parameter/1 failed, no scenario settings"),
-            exit(no_settings);
-        Settings ->
-            case amoc_config:get_scenario_parameter(Name, Settings) of
-                {error, no_parameter} ->
-                    ?LOG_ERROR("get_parameter/1 failed, no such parameter"),
-                    exit(no_parameter);
-                {ok, Value} -> Value
-            end
-    end.
-
-get_parameter(Name, Settings) ->
-    case amoc_config:get_scenario_parameter(Name, Settings) of
-        {error, no_parameter} ->
-            ?LOG_ERROR("get_parameter/2 failed, no such parameter"),
-            exit(no_parameter);
-        {ok, Value} -> Value
-    end.

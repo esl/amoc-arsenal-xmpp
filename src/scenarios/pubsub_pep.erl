@@ -1,31 +1,22 @@
 -module(pubsub_pep).
 
--behavior(amoc_scenario).
+-behaviour(amoc_scenario).
 
 -include_lib("exml/include/exml.hrl").
 -include_lib("escalus/include/escalus.hrl").
 -include_lib("escalus/include/escalus_xmlns.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--required_variable({'IQ_TIMEOUT',         <<"IQ timeout (milliseconds, def: 10000ms)"/utf8>>}).
--required_variable({'COORDINATOR_DELAY',  <<"Delay after N subscriptions (milliseconds, def: 0ms)"/utf8>>}).
--required_variable({'NODE_CREATION_RATE', <<"Rate of node creations (per minute, def:600)">>}).
--required_variable({'PUBLICATION_SIZE',   <<"Size of additional payload (bytes, def:300)">>}).
--required_variable({'PUBLICATION_RATE',   <<"Rate of publications (per minute, def:1500)">>}).
--required_variable({'N_OF_SUBSCRIBERS',   <<"Number of subscriptions for each node (def: 50)"/utf8>>}).
--required_variable({'ACTIVATION_POLICY',  <<"Publish after subscribtion of (def: all_nodes | n_nodes)"/utf8>>}).
--required_variable({'MIM_HOST',           <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>}).
+-include("generic_required_variables.hrl").
 
--define(ALL_PARAMETERS,[
-    {iq_timeout,                   10000, positive_integer},
-    {coordinator_delay,                0, nonnegative_integer},
-    {node_creation_rate,             600, positive_integer},
-    {publication_size,               300, nonnegative_integer},
-    {publication_rate,              1500, positive_integer},
-    {n_of_subscribers,                50, nonnegative_integer},
-    {activation_policy,        all_nodes, [all_nodes, n_nodes]},
-    {mim_host,           <<"localhost">>, bitstring}
-]).
+-required_variable({iq_timeout,         <<"IQ timeout (milliseconds, def: 10000ms)"/utf8>>,                        10000,           positive_integer}).
+-required_variable({coordinator_delay,  <<"Delay after N subscriptions (milliseconds, def: 0ms)"/utf8>>,           0,               nonnegative_integer}).
+-required_variable({node_creation_rate, <<"Rate of node creations (per minute, def:600)">>,                        600,             positive_integer}).
+-required_variable({publication_size,   <<"Size of additional payload (bytes, def:300)">>,                         300,             nonnegative_integer}).
+-required_variable({publication_rate,   <<"Rate of publications (per minute, def:1500)">>,                         1500,            positive_integer}).
+-required_variable({n_of_subscribers,   <<"Number of subscriptions for each node (def: 50)"/utf8>>,                50,              nonnegative_integer}).
+-required_variable({activation_policy,  <<"Publish after subscribtion of (def: all_nodes | n_nodes)"/utf8>>,       all_nodes,       [all_nodes, n_nodes]}).
+-required_variable({mim_host,           <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>, <<"localhost">>, bitstring}).
 
 -define(PEP_NODE_NS, <<"just_some_random_namespace">>).
 -define(CAPS_HASH, <<"erNmVoMSwRBR4brUU/inYQ5NFr0=">>). %% mod_caps:make_disco_hash(feature_elems(), sha1).
@@ -37,28 +28,23 @@
 
 -define(COORDINATOR_TIMEOUT, 100).
 
--export([init/0, start/2]).
+-export([init/0, start/1]).
 
--spec init() -> {ok, amoc_scenario:state()} | {error, Reason :: term()}.
+-spec init() -> ok.
 init() ->
     init_metrics(),
-    case amoc_config:parse_scenario_settings(?ALL_PARAMETERS) of
-        {ok, Settings} ->
+    {ok, PublicationRate} = amoc_config:get(publication_rate),
+    {ok, NodeCreationRate} = amoc_config:get(node_creation_rate),
 
-            {ok, PublicationRate} = amoc_config:get_scenario_parameter(publication_rate, Settings),
-            {ok, NodeCreationRate} = amoc_config:get_scenario_parameter(node_creation_rate, Settings),
+    amoc_throttle:start(?NODE_CREATION_THROTTLING, NodeCreationRate),
+    amoc_throttle:start(?PUBLICATION_THROTTLING, PublicationRate),
+    start_coordinator(),
+    ok.
 
-            amoc_throttle:start(?NODE_CREATION_THROTTLING, NodeCreationRate),
-            amoc_throttle:start(?PUBLICATION_THROTTLING, PublicationRate),
-            start_coordinator(Settings),
-            {ok, Settings};
-        Error -> Error
-    end.
-
--spec start(amoc_scenario:user_id(), amoc_scenario:state()) -> any().
-start(Id, Settings) ->
-    Client = connect_amoc_user(Id, Settings),
-    start_user(Client, Settings).
+-spec start(amoc_scenario:user_id()) -> any().
+start(Id) ->
+    Client = connect_amoc_user(Id),
+    start_user(Client).
 
 init_metrics() ->
     iq_metrics:start([node_creation, publication]),
@@ -71,19 +57,19 @@ init_metrics() ->
 %%------------------------------------------------------------------------------------------------
 %% Coordinator
 %%------------------------------------------------------------------------------------------------
-start_coordinator(Settings) ->
-    amoc_coordinator:start(?MODULE, get_coordination_plan(Settings), ?COORDINATOR_TIMEOUT).
+start_coordinator() ->
+    amoc_coordinator:start(?MODULE, get_coordination_plan(), ?COORDINATOR_TIMEOUT).
 
-get_coordination_plan(Settings) ->
-    N = get_no_of_node_subscribers(Settings),
+get_coordination_plan() ->
+    N = get_no_of_node_subscribers(),
 
     [{N, [fun make_clients_friends/3,
-          users_activation(Settings, n_nodes),
-          coordination_delay(Settings)]},
-     {all, users_activation(Settings, all_nodes)}].
+          users_activation(n_nodes),
+          coordination_delay()]},
+     {all, users_activation(all_nodes)}].
 
-coordination_delay(Settings) ->
-    Delay = get_parameter(coordinator_delay, Settings),
+coordination_delay() ->
+    Delay = amoc_config:get(coordinator_delay),
     fun({coordinate, _}) -> timer:sleep(Delay);
         (_) -> ok
     end.
@@ -93,8 +79,8 @@ make_clients_friends(_, {_, C1}, {_, C2}) ->
     send_presence(C1, <<"subscribe">>, C2),
     send_presence(C2, <<"subscribe">>, C1).
 
-users_activation(Settings, ActivationPolicy) ->
-    case get_parameter(activation_policy, Settings) of
+users_activation(ActivationPolicy) ->
+    case amoc_config:get(activation_policy) of
         ActivationPolicy ->
             fun(_, CoordinationData) ->
                 [schedule_publishing(Pid) || {Pid, _} <- CoordinationData]
@@ -104,35 +90,35 @@ users_activation(Settings, ActivationPolicy) ->
 %%------------------------------------------------------------------------------------------------
 %% User
 %%------------------------------------------------------------------------------------------------
-start_user(Client, Settings) ->
+start_user(Client) ->
     ?LOG_DEBUG("user process ~p", [self()]),
-    create_new_node(Client, Settings),
+    create_new_node(Client),
     erlang:monitor(process, Client#client.rcv_pid),
     escalus_tcp:set_active(Client#client.rcv_pid, true),
     send_presence_with_caps(Client),
-    user_loop(Settings, Client).
+    user_loop(Client).
 
-create_new_node(Client, Settings) ->
+create_new_node(Client) ->
     amoc_throttle:send_and_wait(?NODE_CREATION_THROTTLING, create_node),
-    create_pubsub_node(Client, Settings),
+    create_pubsub_node(Client),
     amoc_coordinator:add(?MODULE, Client).
 
-user_loop(Settings, Client) ->
+user_loop(Client) ->
     receive
         {stanza, _, #xmlel{name = <<"message">>} = Stanza, #{recv_timestamp := TimeStamp}} ->
             process_msg(Stanza, TimeStamp),
-            user_loop(Settings, Client);
+            user_loop(Client);
         {stanza, _, #xmlel{name = <<"iq">>} = Stanza, _} ->
             process_iq(Client, Stanza),
-            user_loop(Settings, Client);
+            user_loop(Client);
         {stanza, _, #xmlel{name = <<"presence">>} = Stanza, _} ->
             process_presence(Client, Stanza),
-            user_loop(Settings, Client);
+            user_loop(Client);
         publish_item ->
-            IqTimeout = get_parameter(iq_timeout, Settings),
-            Id = publish_pubsub_item(Client, Settings),
+            IqTimeout = amoc_config:get(iq_timeout),
+            Id = publish_pubsub_item(Client),
             iq_metrics:request(publication, Id, IqTimeout),
-            user_loop(Settings, Client);
+            user_loop(Client);
         {'DOWN', _, process, Pid, Info} when Pid =:= Client#client.rcv_pid ->
             ?LOG_ERROR("TCP connection process ~p down: ~p", [Pid, Info]);
         Msg ->
@@ -145,9 +131,9 @@ schedule_publishing(Pid) ->
 %%------------------------------------------------------------------------------------------------
 %% User connection
 %%------------------------------------------------------------------------------------------------
-connect_amoc_user(Id, Settings) ->
+connect_amoc_user(Id) ->
     ExtraProps = amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
-                 [{server, get_parameter(mim_host, Settings)},
+                 [{server, amoc_config:get(mim_host)},
                   {socket_opts, socket_opts()}],
 
     {ok, Client, _} = amoc_xmpp:connect_or_exit(Id, ExtraProps),
@@ -162,14 +148,14 @@ socket_opts() ->
 %%------------------------------------------------------------------------------------------------
 %% Node creation
 %%------------------------------------------------------------------------------------------------
-create_pubsub_node(Client, Settings) ->
+create_pubsub_node(Client) ->
     ReqId = iq_id(create, Client),
     iq_metrics:request(node_creation, ReqId),
     Request = publish_pubsub_stanza(Client, ReqId, #xmlel{name = <<"nothing">>}),
     %Request = escalus_pubsub_stanza:create_node(Client, ReqId, ?NODE),
     escalus:send(Client, Request),
 
-    CreateNodeResult = (catch escalus:wait_for_stanza(Client, get_parameter(iq_timeout, Settings))),
+    CreateNodeResult = (catch escalus:wait_for_stanza(Client, amoc_config:get(iq_timeout))),
 
     case {escalus_pred:is_iq_result(Request, CreateNodeResult), CreateNodeResult} of
         {true, _} ->
@@ -209,9 +195,9 @@ caps() ->
 %%------------------------------------------------------------------------------------------------
 %% Item publishing
 %%------------------------------------------------------------------------------------------------
-publish_pubsub_item(Client, Settings) ->
+publish_pubsub_item(Client) ->
     Id = iq_id(publish, Client),
-    PayloadSize = get_parameter(publication_size, Settings),
+    PayloadSize = amoc_config:get(publication_size),
     Content = item_content(PayloadSize),
     Request = publish_pubsub_stanza(Client, Id, Content),
     escalus:send(Client, Request),
@@ -321,14 +307,6 @@ random_suffix() ->
 %%------------------------------------------------------------------------------------------------
 %% Config helpers
 %%------------------------------------------------------------------------------------------------
-get_parameter(Name, Settings) ->
-    case amoc_config:get_scenario_parameter(Name, Settings) of
-        {error, Err} ->
-            ?LOG_ERROR("amoc_config:get_scenario_parameter/2 failed ~p", [Err]),
-            exit(Err);
-        {ok, Value} -> Value
-    end.
-
-get_no_of_node_subscribers(Settings) ->
+get_no_of_node_subscribers() ->
     %instead of constant No of subscriptions we can use min/max values.
-    get_parameter(n_of_subscribers, Settings).
+    amoc_config:get(n_of_subscribers).

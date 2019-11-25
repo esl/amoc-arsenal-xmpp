@@ -4,6 +4,8 @@
 %%==============================================================================
 -module(mongoose_in_band_registration).
 
+-behaviour(amoc_scenario).
+
 -define(HOST, <<"localhost">>).
 -define(ADDR,  <<"127.0.0.1">>).
 
@@ -11,6 +13,8 @@
 -export([init/0]).
 
 -include_lib("kernel/include/logger.hrl").
+
+-include("generic_required_variables.hrl").
 
 -spec init() -> ok.
 init() ->
