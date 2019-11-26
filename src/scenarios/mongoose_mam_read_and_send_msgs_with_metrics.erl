@@ -16,8 +16,6 @@
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--include("generic_required_variables.hrl").
-
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
 -define(NUMBER_OF_SEND_MESSAGE_REPEATS, 73).
@@ -44,10 +42,10 @@
 
 -spec init() -> ok.
 init() ->
-    amoc_metrics:init(counters, amoc_config:get(messages_spiral_name)),
+    amoc_metrics:init(counters, messages_sent),
     amoc_metrics:init(counters, ?MAM_LOOKUPS_CT),
     amoc_metrics:init(counters, ?MAM_FAILED_LOOKUPS_CT),
-    amoc_metrics:init(times, amoc_config:get(message_ttd_histogram_name)),
+    amoc_metrics:init(times, message_ttd),
     amoc_metrics:init(times, ?MAM_LOOKUP_RESP_TIME),
     ok.
 

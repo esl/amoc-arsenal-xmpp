@@ -7,8 +7,6 @@
 -include_lib("escalus/include/escalus_xmlns.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--include("generic_required_variables.hrl").
-
 -required_variable({iq_timeout,         <<"IQ timeout (milliseconds, def: 10000ms)"/utf8>>,                        10000,           positive_integer}).
 -required_variable({coordinator_delay,  <<"Delay after N subscriptions (milliseconds, def: 0ms)"/utf8>>,           0,               nonnegative_integer}).
 -required_variable({node_creation_rate, <<"Rate of node creations (per minute, def:600)">>,                        600,             positive_integer}).

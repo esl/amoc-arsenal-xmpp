@@ -10,8 +10,6 @@
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--include("generic_required_variables.hrl").
-
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 
 -export([init/0, start/1]).

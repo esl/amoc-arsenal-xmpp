@@ -17,8 +17,6 @@
 -include_lib("escalus/include/escalus.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--include("generic_required_variables.hrl").
-
 -define(CHECKER_SESSIONS_INDICATOR, 10). %% How often a checker session should be generated
 -define(SLEEP_TIME_AFTER_SCENARIO, 0). %% wait 10s after scenario before disconnecting
 -define(NUMBER_OF_PREV_NEIGHBOURS, 4).
@@ -35,8 +33,8 @@
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init metrics"),
-    amoc_metrics:init(counters, amoc_config:get(messages_spiral_name)),
-    amoc_metrics:init(times, amoc_config:get(message_ttd_histogram_name)),
+    amoc_metrics:init(counters, messages_sent),
+    amoc_metrics:init(times, message_ttd),
     amoc_metrics:init(counters, ?RECONNECTS_CT),
     ok.
 
