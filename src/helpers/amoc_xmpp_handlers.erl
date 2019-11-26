@@ -56,7 +56,7 @@ perform_action(Action, _Client, _Stanza, _Metadata) when is_function(Action, 0) 
                   exml_stream:element(),
                   escalus_connection:metadata()) -> any().
 measure_ttd(_Client, Stanza, Metadata) ->
-    amoc_metrics:update_time(message_ttd), ttd(Stanza, Metadata)).
+    amoc_metrics:update_time(message_ttd, ttd(Stanza, Metadata)).
 
 -spec measure_sent_messages() -> any().
 measure_sent_messages() ->
