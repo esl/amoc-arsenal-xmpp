@@ -11,23 +11,23 @@
 %%==============================================================================
 -module(mongoose_mam_read_and_send_msgs_with_metrics).
 
+-behaviour(amoc_scenario).
+
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
 -define(NUMBER_OF_SEND_MESSAGE_REPEATS, 73).
--required_variable({'MESSAGE_INTERVAL', <<"Wait time (in seconds) between sent messages"/utf8>>}).
--required_variable({'NUMBER_OF_PREV_USERS', <<"Number of users before current one to use."/utf8>>}).
--required_variable({'NUMBER_OF_NEXT_USERS', <<"Number of users after current one to use."/utf8>>}).
--required_variable({'MAM_READER_SESSIONS_INDICATOR', <<"How often a MAM reader is created, like every 53th session">>}).
+-required_variable({message_interval, <<"Wait time (in seconds) between sent messages"/utf8>>}).
+-required_variable({number_of_prev_users, <<"Number of users before current one to use."/utf8>>}).
+-required_variable({number_of_next_users, <<"Number of users after current one to use."/utf8>>}).
+-required_variable({mam_reader_sessions_indicator, <<"How often a MAM reader is created, like every 53th session">>}).
 
 %%% MAM configuration
 -define(MAM_READ_ARCHIVE_INTERVAL, (60+rand:uniform(20))*1000).
 %% Wait at most 5s for MAM responses (IQ or message)
 -define(MAM_STANZAS_TIMEOUT, 5000).
-
--behaviour(amoc_scenario).
 
 -export([start/1]).
 -export([init/0]).
@@ -42,10 +42,10 @@
 
 -spec init() -> ok.
 init() ->
-    amoc_metrics:init(counters, amoc_config:get(messages_spiral_name)),
+    amoc_metrics:init(counters, messages_sent),
     amoc_metrics:init(counters, ?MAM_LOOKUPS_CT),
     amoc_metrics:init(counters, ?MAM_FAILED_LOOKUPS_CT),
-    amoc_metrics:init(times, amoc_config:get(message_ttd_histogram_name)),
+    amoc_metrics:init(times, message_ttd),
     amoc_metrics:init(times, ?MAM_LOOKUP_RESP_TIME),
     ok.
 
@@ -54,7 +54,7 @@ start(MyId) ->
     ExtraSpec = [{socket_opts, socket_opts()} | send_and_recv_escalus_handlers()],
     {ok, Client, _} = amoc_xmpp:connect_or_exit(MyId, ExtraSpec),
 
-    MAMReaderIndicator = amoc_config:get('MAM_READER_SESSIONS_INDICATOR', 53),
+    MAMReaderIndicator = amoc_config:get(mam_reader_sessions_indicator, 53),
     SessionIndicator = session_indicator(MyId, MAMReaderIndicator),
 
     do(SessionIndicator, MyId, Client),
@@ -77,11 +77,11 @@ do(sender, MyId, Client) ->
     escalus_session:send_presence_available(Client),
     escalus_connection:wait(Client, 5000),
 
-    Prev = amoc_config:get('NUMBER_OF_PREV_USERS', 1),
-    Next = amoc_config:get('NUMBER_OF_NEXT_USERS', 1),
+    Prev = amoc_config:get(number_of_prev_users, 1),
+    Next = amoc_config:get(number_of_next_users, 1),
     NeighbourIds = lists:delete(MyId, lists:seq(max(1, MyId - Prev),
                                                 MyId + Next)),
-    MessageInterval = amoc_config:get('MESSAGE_INTERVAL', 180),
+    MessageInterval = amoc_config:get(message_interval, 180),
     send_messages_many_times(Client, timer:seconds(MessageInterval), NeighbourIds);
 do(mam_reader, _MyId, Client) ->
     escalus_session:send_presence_available(Client),

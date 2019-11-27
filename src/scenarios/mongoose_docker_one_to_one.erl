@@ -11,17 +11,17 @@
 %%==============================================================================
 -module(mongoose_docker_one_to_one).
 
+-behaviour(amoc_scenario).
+
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
--required_variable({'NUMBER_OF_PREV_NEIGHBOURS', <<"Number of users before current one to use."/utf8>>}).
--required_variable({'NUMBER_OF_NEXT_NEIGHBOURS',<<"Number of users after current one to use."/utf8>>}).
--required_variable({'NUMBER_OF_SEND_MESSAGE_REPEATS', <<"Number of send message (to all neighours) repeats"/utf8>>}).
--required_variable({'SLEEP_TIME_AFTER_EVERY_MESSAGE', <<"Wait time between sent messages (in seconds)"/utf8>>}).
-
--behaviour(amoc_scenario).
+-required_variable({number_of_prev_neighbours, <<"Number of users before current one to use."/utf8>>}).
+-required_variable({number_of_next_neighbours,<<"Number of users after current one to use."/utf8>>}).
+-required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats"/utf8>>}).
+-required_variable({sleep_time_after_every_message, <<"Wait time between sent messages (in seconds)"/utf8>>}).
 
 -export([start/1]).
 -export([init/0]).
@@ -29,8 +29,8 @@
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init metrics"),
-    amoc_metrics:init(counters, amoc_config:get(messages_spiral_name)),
-    amoc_metrics:init(times, amoc_config:get(message_ttd_histogram_name)),
+    amoc_metrics:init(counters, messages_sent),
+    amoc_metrics:init(times, message_ttd),
     ok.
 
 -spec start(amoc_scenario:user_id()) -> any().
@@ -53,11 +53,11 @@ do(MyId, Client) ->
     escalus_session:send_presence_available(Client),
     escalus_connection:wait(Client, 5000),
 
-    PrevNeighbours = amoc_config:get('NUMBER_OF_PREV_NEIGHBOURS', 4),
-    NextNeighbours = amoc_config:get('NUMBER_OF_NEXT_NEIGHBOURS', 4),
+    PrevNeighbours = amoc_config:get(number_of_prev_neighbours, 4),
+    NextNeighbours = amoc_config:get(number_of_next_neighbours, 4),
     NeighbourIds = lists:delete(MyId, lists:seq(max(1, MyId - PrevNeighbours),
                                                 MyId + NextNeighbours)),
-    SleepTimeAfterMessage = amoc_config:get('SLEEP_TIME_AFTER_EVERY_MESSAGE', 20),
+    SleepTimeAfterMessage = amoc_config:get(sleep_time_after_every_message, 20),
     send_messages_many_times(Client, timer:seconds(SleepTimeAfterMessage), NeighbourIds).
 
 -spec send_messages_many_times(escalus:client(), timeout(), [amoc_scenario:user_id()]) -> ok.
@@ -65,7 +65,7 @@ send_messages_many_times(Client, MessageInterval, NeighbourIds) ->
     S = fun(_) ->
                 send_messages_to_neighbors(Client, NeighbourIds, MessageInterval)
         end,
-    SendMessageRepeats = amoc_config:get('NUMBER_OF_SEND_MESSAGE_REPEATS', 73),
+    SendMessageRepeats = amoc_config:get(number_of_send_message_repeats, 73),
     lists:foreach(S, lists:seq(1, SendMessageRepeats)).
 
 

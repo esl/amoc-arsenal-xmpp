@@ -11,6 +11,8 @@
 %%==============================================================================
 -module(mongoose_simple_with_metrics).
 
+-behaviour(amoc_scenario).
+
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
@@ -21,16 +23,14 @@
 -define(NUMBER_OF_SEND_MESSAGE_REPEATS, 73).
 -define(SLEEP_TIME_AFTER_EVERY_MESSAGE, 20000).
 
--behaviour(amoc_scenario).
-
 -export([start/1]).
 -export([init/0]).
 
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init metrics"),
-    amoc_metrics:init(counters, amoc_config:get(messages_spiral_name)),
-    amoc_metrics:init(times, amoc_config:get(message_ttd_histogram_name)),
+    amoc_metrics:init(counters, messages_sent),
+    amoc_metrics:init(times, message_ttd),
     ok.
 
 -spec start(amoc_scenario:user_id()) -> any().

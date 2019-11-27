@@ -1,6 +1,6 @@
 -module(simple_rest_api).
 
--behavior(amoc_scenario).
+-behaviour(amoc_scenario).
 
 -export([start/1]).
 -export([init/0]).

@@ -11,6 +11,8 @@
 %%==============================================================================
 -module(mongoose_simple_reconnect).
 
+-behaviour(amoc_scenario).
+
 -include_lib("exml/include/exml.hrl").
 -include_lib("escalus/include/escalus.hrl").
 -include_lib("kernel/include/logger.hrl").
@@ -23,8 +25,6 @@
 -define(SLEEP_TIME_AFTER_EVERY_MESSAGE, 20000).
 -define(SLEEP_TIME_BEFORE_RECONNECT, 5000).
 
--behaviour(amoc_scenario).
-
 -export([start/1]).
 -export([init/0]).
 
@@ -33,8 +33,8 @@
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init metrics"),
-    amoc_metrics:init(counters, amoc_config:get(messages_spiral_name)),
-    amoc_metrics:init(times, amoc_config:get(message_ttd_histogram_name)),
+    amoc_metrics:init(counters, messages_sent),
+    amoc_metrics:init(times, message_ttd),
     amoc_metrics:init(counters, ?RECONNECTS_CT),
     ok.
 
