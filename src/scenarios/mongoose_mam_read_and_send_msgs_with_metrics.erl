@@ -54,7 +54,7 @@ start(MyId) ->
     ExtraSpec = [{socket_opts, socket_opts()} | send_and_recv_escalus_handlers()],
     {ok, Client, _} = amoc_xmpp:connect_or_exit(MyId, ExtraSpec),
 
-    MAMReaderIndicator = amoc_config:get('mam_reader_sessions_indicator', 53),
+    MAMReaderIndicator = amoc_config:get(mam_reader_sessions_indicator, 53),
     SessionIndicator = session_indicator(MyId, MAMReaderIndicator),
 
     do(SessionIndicator, MyId, Client),
@@ -77,11 +77,11 @@ do(sender, MyId, Client) ->
     escalus_session:send_presence_available(Client),
     escalus_connection:wait(Client, 5000),
 
-    Prev = amoc_config:get('number_of_prev_users', 1),
-    Next = amoc_config:get('number_of_next_users', 1),
+    Prev = amoc_config:get(number_of_prev_users, 1),
+    Next = amoc_config:get(number_of_next_users, 1),
     NeighbourIds = lists:delete(MyId, lists:seq(max(1, MyId - Prev),
                                                 MyId + Next)),
-    MessageInterval = amoc_config:get('message_interval', 180),
+    MessageInterval = amoc_config:get(message_interval, 180),
     send_messages_many_times(Client, timer:seconds(MessageInterval), NeighbourIds);
 do(mam_reader, _MyId, Client) ->
     escalus_session:send_presence_available(Client),

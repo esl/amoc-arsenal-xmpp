@@ -53,11 +53,11 @@ do(MyId, Client) ->
     escalus_session:send_presence_available(Client),
     escalus_connection:wait(Client, 5000),
 
-    PrevNeighbours = amoc_config:get('number_of_prev_neighbours', 4),
-    NextNeighbours = amoc_config:get('number_of_next_neighbours', 4),
+    PrevNeighbours = amoc_config:get(number_of_prev_neighbours, 4),
+    NextNeighbours = amoc_config:get(number_of_next_neighbours, 4),
     NeighbourIds = lists:delete(MyId, lists:seq(max(1, MyId - PrevNeighbours),
                                                 MyId + NextNeighbours)),
-    SleepTimeAfterMessage = amoc_config:get('sleep_time_after_every_message', 20),
+    SleepTimeAfterMessage = amoc_config:get(sleep_time_after_every_message, 20),
     send_messages_many_times(Client, timer:seconds(SleepTimeAfterMessage), NeighbourIds).
 
 -spec send_messages_many_times(escalus:client(), timeout(), [amoc_scenario:user_id()]) -> ok.
@@ -65,7 +65,7 @@ send_messages_many_times(Client, MessageInterval, NeighbourIds) ->
     S = fun(_) ->
                 send_messages_to_neighbors(Client, NeighbourIds, MessageInterval)
         end,
-    SendMessageRepeats = amoc_config:get('number_of_send_message_repeats', 73),
+    SendMessageRepeats = amoc_config:get(number_of_send_message_repeats, 73),
     lists:foreach(S, lists:seq(1, SendMessageRepeats)).
 
 
