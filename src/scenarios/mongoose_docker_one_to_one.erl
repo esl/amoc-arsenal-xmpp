@@ -2,10 +2,10 @@
 %% Copyright 2019 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %%
-%% In this scenarion users are sending message to its neighbours
-%% (users wiht lower and grater id defined by NUMBER_OF_*_NEIGHBOURS values)
+%% In this scenario users are sending messages to their neighbours
+%% (users with lower and greater IDs defined by NUMBER_OF_*_NEIGHBOURS values)
 %% Messages will be sent NUMBER_OF_SEND_MESSAGE_REPEATS to every selected neighbour
-%% after every message given the script will wait SLEEP_TIME_AFTER_EVERY_MESSAGE ms
+%% after every message given the script will wait SLEEP_TIME_AFTER_EVERY_MESSAGE s
 %% Message TTD is calculated by the `received_stanza_handler`.
 %%
 %%==============================================================================
@@ -18,10 +18,10 @@
 
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
--required_variable({number_of_prev_neighbours, <<"Number of users before current one to use."/utf8>>}).
--required_variable({number_of_next_neighbours,<<"Number of users after current one to use."/utf8>>}).
--required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats"/utf8>>}).
--required_variable({sleep_time_after_every_message, <<"Wait time between sent messages (in seconds)"/utf8>>}).
+-required_variable({number_of_prev_neighbours,      <<"Number of users before current one to use (def: 4)"/utf8>>,           4,  nonnegative_integer}).
+-required_variable({number_of_next_neighbours,      <<"Number of users after current one to use (def: 4)"/utf8>>,            4,  nonnegative_integer}).
+-required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats (def: 73)"/utf8>>, 73, positive_integer}).
+-required_variable({sleep_time_after_every_message, <<"Wait time between sent messages (seconds, def: 20)"/utf8>>,          20, nonnegative_integer}).
 
 -export([start/1]).
 -export([init/0]).
@@ -53,11 +53,11 @@ do(MyId, Client) ->
     escalus_session:send_presence_available(Client),
     escalus_connection:wait(Client, 5000),
 
-    PrevNeighbours = amoc_config:get(number_of_prev_neighbours, 4),
-    NextNeighbours = amoc_config:get(number_of_next_neighbours, 4),
+    PrevNeighbours = amoc_config:get(number_of_prev_neighbours),
+    NextNeighbours = amoc_config:get(number_of_next_neighbours),
     NeighbourIds = lists:delete(MyId, lists:seq(max(1, MyId - PrevNeighbours),
                                                 MyId + NextNeighbours)),
-    SleepTimeAfterMessage = amoc_config:get(sleep_time_after_every_message, 20),
+    SleepTimeAfterMessage = amoc_config:get(sleep_time_after_every_message),
     send_messages_many_times(Client, timer:seconds(SleepTimeAfterMessage), NeighbourIds).
 
 -spec send_messages_many_times(escalus:client(), timeout(), [amoc_scenario:user_id()]) -> ok.
@@ -65,7 +65,7 @@ send_messages_many_times(Client, MessageInterval, NeighbourIds) ->
     S = fun(_) ->
                 send_messages_to_neighbors(Client, NeighbourIds, MessageInterval)
         end,
-    SendMessageRepeats = amoc_config:get(number_of_send_message_repeats, 73),
+    SendMessageRepeats = amoc_config:get(number_of_send_message_repeats),
     lists:foreach(S, lists:seq(1, SendMessageRepeats)).
 
 
@@ -76,7 +76,7 @@ send_messages_to_neighbors(Client, TargetIds, SleepTime) ->
 
 -spec send_message(escalus:client(), amoc_scenario:user_id(), timeout()) -> ok.
 send_message(Client, ToId, SleepTime) ->
-    Body = <<"hello sir, you are a gentelman and a scholar.">>,
+    Body = base64:encode(<<"Message_random_", (crypto:strong_rand_bytes(80 + rand:uniform(40)))/binary>>),
     MsgIn = escalus_stanza:chat_to_with_id_and_timestamp(amoc_xmpp_users:make_jid(ToId), Body),
     escalus_connection:send(Client, MsgIn),
     escalus_connection:wait(Client, SleepTime).
