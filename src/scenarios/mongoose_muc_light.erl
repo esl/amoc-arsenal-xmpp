@@ -8,6 +8,14 @@
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
+-required_variable({delay_after_creating_room,     <<"Delay between each room creation (milliseconds, def: 10000ms)"/utf8>>,                  10000,           nonnegative_integer}).
+-required_variable({delay_before_sending_messages, <<"Delay after creating all rooms (milliseconds, def: 0ms)"/utf8>>,                        0,               nonnegative_integer}).
+-required_variable({messages_to_send_per_room,     <<"How many messages each user sends to their every room (def: 1000)"/utf8>>,              1000,            positive_integer}).
+-required_variable({message_interval_per_room,     <<"Interval between messages sent to a room by a user (milliseconds, def: 1000ms)"/utf8>>, 1000,            nonnegative_integer}).
+-required_variable({rooms_per_user,                <<"Number of clients in a room (def: 10)"/utf8>>,                                          10,              positive_integer}).
+-required_variable({users_per_room,                <<"Number of rooms each client is in (def: 20)"/utf8>>,                                    20,              positive_integer}).
+-required_variable({mim_host,                      <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>,                 <<"localhost">>, bitstring}).
+
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init the scenario"),
@@ -36,7 +44,9 @@ start(Id) ->
     escalus_connection:wait_forever(Client).
 
 extra_user_spec() ->
-    [{sent_stanza_handlers, sent_stanza_handlers()},
+    amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
+    [{server, amoc_config:get(mim_host)},
+     {sent_stanza_handlers, sent_stanza_handlers()},
      {received_stanza_handlers, received_stanza_handlers()}].
 
 send_presence_available(Client) ->
@@ -143,7 +153,7 @@ ttd(Stanza, #{recv_timestamp := Recv}) ->
     Recv - binary_to_integer(SentBin).
 
 cfg(Name) ->
-    amoc_config:get(Name, default_cfg(Name)).
+    amoc_config:get(Name).
 
 room_jid(RoomId) ->
     <<(room_name(RoomId))/binary, $@, (muc_host())/binary>>.
@@ -158,9 +168,3 @@ ns(muc_light_create) -> <<"urn:xmpp:muclight:0#create">>;
 ns(muc_light_affiliations) -> <<"urn:xmpp:muclight:0#affiliations">>;
 ns(muc_light_configuration) -> <<"urn:xmpp:muclight:0#configuration">>.
 
-default_cfg(delay_after_creating_room) -> 10000;
-default_cfg(delay_before_sending_messages) -> 0;
-default_cfg(messages_to_send_per_room) -> 1000;
-default_cfg(message_interval_per_room) -> 1000;
-default_cfg(rooms_per_user) -> 10;
-default_cfg(users_per_room) -> 20.
