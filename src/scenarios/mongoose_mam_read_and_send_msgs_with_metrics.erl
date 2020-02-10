@@ -2,11 +2,10 @@
 %% Copyright 2015-2019 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %%
-%% In this scenarion users are sending message to its neighbours
-%% (users wiht lower and grater idea defined by NUMBER_OF_*_NEIGHBOURS values)
+%% In this scenario users are sending message to their neighbours
+%% (users with lower and greater IDs defined by NUMBER_OF_*_NEIGHBOURS values)
 %% Messages will be send NUMBER_OF_SEND_MESSAGE_REPEATS to every selected neighbour
-%% after every message given the script will wait SLEEP_TIME_AFTER_EVERY_MESSAGE ms
-%% Every CHECKER_SESSIONS_INDICATOR is a checker session which just measures message TTD
+%% after every message given the user will wait MESSAGE_INTERVAL s
 %%
 %%==============================================================================
 -module(mongoose_mam_read_and_send_msgs_with_metrics).
@@ -18,11 +17,11 @@
 
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
--define(NUMBER_OF_SEND_MESSAGE_REPEATS, 73).
--required_variable({message_interval, <<"Wait time (in seconds) between sent messages"/utf8>>}).
--required_variable({number_of_prev_users, <<"Number of users before current one to use."/utf8>>}).
--required_variable({number_of_next_users, <<"Number of users after current one to use."/utf8>>}).
--required_variable({mam_reader_sessions_indicator, <<"How often a MAM reader is created, like every 53th session">>}).
+-required_variable({message_interval,               <<"Wait time (in seconds) between sent messages (def: 180)"/utf8>>,        180, nonnegative_integer}).
+-required_variable({number_of_prev_users,           <<"Number of users before current one to use (def: 1)"/utf8>>,               1, nonnegative_integer}).
+-required_variable({number_of_next_users,           <<"Number of users after current one to use (def: 1)"/utf8>>,                1, nonnegative_integer}).
+-required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats"/utf8>>,               73, positive_integer}).
+-required_variable({mam_reader_sessions_indicator,  <<"How often a MAM reader is created, like every 53th session (def: 53)">>, 53, positive_integer}).
 
 %%% MAM configuration
 -define(MAM_READ_ARCHIVE_INTERVAL, (60+rand:uniform(20))*1000).
@@ -51,10 +50,11 @@ init() ->
 
 -spec start(amoc_scenario:user_id()) -> any().
 start(MyId) ->
-    ExtraSpec = [{socket_opts, socket_opts()} | send_and_recv_escalus_handlers()],
+    ExtraSpec = amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
+    [{socket_opts, socket_opts()} | send_and_recv_escalus_handlers()],
     {ok, Client, _} = amoc_xmpp:connect_or_exit(MyId, ExtraSpec),
 
-    MAMReaderIndicator = amoc_config:get(mam_reader_sessions_indicator, 53),
+    MAMReaderIndicator = amoc_config:get(mam_reader_sessions_indicator),
     SessionIndicator = session_indicator(MyId, MAMReaderIndicator),
 
     do(SessionIndicator, MyId, Client),
@@ -77,11 +77,11 @@ do(sender, MyId, Client) ->
     escalus_session:send_presence_available(Client),
     escalus_connection:wait(Client, 5000),
 
-    Prev = amoc_config:get(number_of_prev_users, 1),
-    Next = amoc_config:get(number_of_next_users, 1),
+    Prev = amoc_config:get(number_of_prev_users),
+    Next = amoc_config:get(number_of_next_users),
     NeighbourIds = lists:delete(MyId, lists:seq(max(1, MyId - Prev),
                                                 MyId + Next)),
-    MessageInterval = amoc_config:get(message_interval, 180),
+    MessageInterval = amoc_config:get(message_interval),
     send_messages_many_times(Client, timer:seconds(MessageInterval), NeighbourIds);
 do(mam_reader, _MyId, Client) ->
     escalus_session:send_presence_available(Client),
@@ -103,7 +103,8 @@ send_messages_many_times(Client, MessageInterval, NeighbourIds) ->
     S = fun(_) ->
                 send_messages_to_neighbors(Client, NeighbourIds, MessageInterval)
         end,
-    lists:foreach(S, lists:seq(1, ?NUMBER_OF_SEND_MESSAGE_REPEATS)).
+    SendMessageRepeats = amoc_config:get(number_of_send_message_repeats),
+    lists:foreach(S, lists:seq(1, SendMessageRepeats)).
 
 -spec send_messages_to_neighbors(escalus:client(), [amoc_scenario:user_id()], timeout()) -> list().
 send_messages_to_neighbors(Client, TargetIds, SleepTime) ->
@@ -114,7 +115,7 @@ send_messages_to_neighbors(Client, TargetIds, SleepTime) ->
 
 -spec send_message(escalus:client(), amoc_scenario:user_id(), timeout()) -> ok.
 send_message(Client, ToId, SleepTime) ->
-    Body = <<"hello sir, you are a gentelman and a scholar.">>,
+    Body = base64:encode(<<"Message_random_", (crypto:strong_rand_bytes(80 + rand:uniform(40)))/binary>>),
     Msg = escalus_stanza:chat_to_with_id_and_timestamp(amoc_xmpp_users:make_jid(ToId), Body),
     escalus_connection:send(Client, Msg),
     escalus_connection:wait(Client, SleepTime).
