@@ -17,14 +17,13 @@
 
 -define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
--required_variable({message_interval,               <<"Wait time (in seconds) between sent messages (def: 180)"/utf8>>,        180, nonnegative_integer}).
--required_variable({number_of_prev_users,           <<"Number of users before current one to use (def: 1)"/utf8>>,               1, nonnegative_integer}).
--required_variable({number_of_next_users,           <<"Number of users after current one to use (def: 1)"/utf8>>,                1, nonnegative_integer}).
--required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats"/utf8>>,               73, positive_integer}).
--required_variable({mam_reader_sessions_indicator,  <<"How often a MAM reader is created, like every 53th session (def: 53)">>, 53, positive_integer}).
+-required_variable({message_interval,               <<"Wait time between sent messages (seconds, def: 180)"/utf8>>,                 180, nonnegative_integer}).
+-required_variable({number_of_prev_users,           <<"Number of users before current one to use (def: 1)"/utf8>>,                    1, nonnegative_integer}).
+-required_variable({number_of_next_users,           <<"Number of users after current one to use (def: 1)"/utf8>>,                     1, nonnegative_integer}).
+-required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats (def: 73)"/utf8>>,          73, positive_integer}).
+-required_variable({mam_reader_sessions_indicator,  <<"How often a MAM reader is created, like every 53th session (def: 53)"/utf8>>, 53, positive_integer}).
+-required_variable({mam_read_archive_interval,      <<"Wait time between reads from MAM for each reader (seconds, def: 60)"/utf8>>,  60, positive_integer}).
 
-%%% MAM configuration
--define(MAM_READ_ARCHIVE_INTERVAL, (60+rand:uniform(20))*1000).
 %% Wait at most 5s for MAM responses (IQ or message)
 -define(MAM_STANZAS_TIMEOUT, 5000).
 
@@ -95,7 +94,8 @@ do(mam_reader, _MyId, Client) ->
 read_archive_forever(Client, Timestamp) ->
     CurrentTimestamp = erlang:timestamp(),
     read_messages_from_archive_since_timestamp(Client, Timestamp, ?MAM_STANZAS_TIMEOUT),
-    escalus_connection:wait(Client, ?MAM_READ_ARCHIVE_INTERVAL),
+    Interval = amoc_config:get(mam_read_archive_interval),
+    escalus_connection:wait(Client, timer:seconds(Interval)),
     read_archive_forever(Client, CurrentTimestamp).
 
 -spec send_messages_many_times(escalus:client(), timeout(), [binjid()]) -> ok.
