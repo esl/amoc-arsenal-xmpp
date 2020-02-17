@@ -15,14 +15,14 @@
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
--required_variable({message_interval,               <<"Wait time between sent messages (seconds, def: 180)"/utf8>>,                 180, nonnegative_integer}).
--required_variable({number_of_prev_users,           <<"Number of users before current one to use (def: 1)"/utf8>>,                    1, nonnegative_integer}).
--required_variable({number_of_next_users,           <<"Number of users after current one to use (def: 1)"/utf8>>,                     1, nonnegative_integer}).
--required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats (def: 73)"/utf8>>,          73, positive_integer}).
--required_variable({mam_reader_sessions_indicator,  <<"How often a MAM reader is created, like every 53th session (def: 53)"/utf8>>, 53, positive_integer}).
--required_variable({mam_read_archive_interval,      <<"Wait time between reads from MAM for each reader (seconds, def: 60)"/utf8>>,  60, positive_integer}).
+-required_variable({message_interval,               <<"Wait time between sent messages (seconds, def: 180)"/utf8>>,                  180,             nonnegative_integer}).
+-required_variable({number_of_prev_users,           <<"Number of users before current one to use (def: 1)"/utf8>>,                   1,               nonnegative_integer}).
+-required_variable({number_of_next_users,           <<"Number of users after current one to use (def: 1)"/utf8>>,                    1,               nonnegative_integer}).
+-required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats (def: 73)"/utf8>>,          73,              positive_integer}).
+-required_variable({mam_reader_sessions_indicator,  <<"How often a MAM reader is created, like every 53th session (def: 53)"/utf8>>, 53,              positive_integer}).
+-required_variable({mam_read_archive_interval,      <<"Wait time between reads from MAM for each reader (seconds, def: 60)"/utf8>>,  60,              positive_integer}).
+-required_variable({mim_host,                       <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>,       <<"localhost">>, bitstring}).
 
 %% Wait at most 5s for MAM responses (IQ or message)
 -define(MAM_STANZAS_TIMEOUT, 5000).
@@ -49,8 +49,9 @@ init() ->
 
 -spec start(amoc_scenario:user_id()) -> any().
 start(MyId) ->
-    ExtraSpec = amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
-    [{socket_opts, socket_opts()} | send_and_recv_escalus_handlers()],
+    ExtraSpec = [{server, amoc_config:get(mim_host)}, {socket_opts, socket_opts()}] ++
+                amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
+                send_and_recv_escalus_handlers(),
     {ok, Client, _} = amoc_xmpp:connect_or_exit(MyId, ExtraSpec),
 
     MAMReaderIndicator = amoc_config:get(mam_reader_sessions_indicator),

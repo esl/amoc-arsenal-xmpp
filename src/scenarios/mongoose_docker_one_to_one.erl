@@ -16,12 +16,12 @@
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--define(HOST, <<"localhost">>). %% The virtual host served by the server
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
--required_variable({number_of_prev_neighbours,      <<"Number of users before current one to use (def: 4)"/utf8>>,           4,  nonnegative_integer}).
--required_variable({number_of_next_neighbours,      <<"Number of users after current one to use (def: 4)"/utf8>>,            4,  nonnegative_integer}).
--required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats (def: 73)"/utf8>>, 73, positive_integer}).
--required_variable({sleep_time_after_every_message, <<"Wait time between sent messages (seconds, def: 20)"/utf8>>,          20, nonnegative_integer}).
+-required_variable({number_of_prev_neighbours,      <<"Number of users before current one to use (def: 4)"/utf8>>,             4,  nonnegative_integer}).
+-required_variable({number_of_next_neighbours,      <<"Number of users after current one to use (def: 4)"/utf8>>,              4,  nonnegative_integer}).
+-required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats (def: 73)"/utf8>>,    73, positive_integer}).
+-required_variable({sleep_time_after_every_message, <<"Wait time between sent messages (seconds, def: 20)"/utf8>>,             20, nonnegative_integer}).
+-required_variable({mim_host,                       <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>, <<"localhost">>, bitstring}).
 
 -export([start/1]).
 -export([init/0]).
@@ -35,9 +35,9 @@ init() ->
 
 -spec start(amoc_scenario:user_id()) -> any().
 start(MyId) ->
-    ExtraProps = amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
-    send_and_recv_escalus_handlers() ++
-    [{socket_opts, socket_opts()}],
+    ExtraProps = [{server, amoc_config:get(mim_host)}, {socket_opts, socket_opts()}] ++
+                amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
+                send_and_recv_escalus_handlers(),
     {ok, Client, _} = amoc_xmpp:connect_or_exit(MyId, ExtraProps),
 
     do(MyId, Client),
