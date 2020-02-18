@@ -56,7 +56,10 @@ perform_action(Action, _Client, _Stanza, _Metadata) when is_function(Action, 0) 
                   exml_stream:element(),
                   escalus_connection:metadata()) -> any().
 measure_ttd(_Client, Stanza, Metadata) ->
-    amoc_metrics:update_time(message_ttd, ttd(Stanza, Metadata)).
+    case exml_query:subelement(Stanza, <<"delay">>) of
+        undefined -> amoc_metrics:update_time(message_ttd, ttd(Stanza, Metadata));
+        _ -> ok
+    end.
 
 -spec measure_sent_messages() -> any().
 measure_sent_messages() ->
