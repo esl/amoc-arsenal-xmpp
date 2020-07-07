@@ -6,15 +6,28 @@
 -include_lib("escalus/include/escalus.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--required_variable({iq_timeout,         <<"IQ timeout (milliseconds, def: 10000ms)"/utf8>>,                        10000,                  positive_integer}).
--required_variable({coordinator_delay,  <<"Delay after N subscriptions (milliseconds, def: 0ms)"/utf8>>,           0,                      nonnegative_integer}).
--required_variable({node_creation_rate, <<"Rate of node creations (per minute, def:600)">>,                        600,                    positive_integer}).
--required_variable({publication_size,   <<"Size of additional payload (bytes, def:300)">>,                         300,                    nonnegative_integer}).
--required_variable({publication_rate,   <<"Rate of publications (per minute, def:1500)">>,                         1500,                   positive_integer}).
--required_variable({n_of_subscribers,   <<"Number of subscriptions for each node (def: 50)"/utf8>>,                50,                     nonnegative_integer}).
--required_variable({activation_policy,  <<"Publish after subscribtion of (def: all_nodes | n_nodes)"/utf8>>,      all_nodes,              [all_nodes, n_nodes]}).
--required_variable({mim_host,           <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>, <<"localhost">>,        bitstring}).
--required_variable({pubsub_addr,        <<"Pubsub service address (def: <<\"pubsub.localhost\">>"/utf8>>,          <<"pubsub.localhost">>, bitstring}).
+-define(V(X), fun amoc_config_validation:X/1).
+
+-required_variable([
+    #{name => iq_timeout, default_value => 10000, verification => ?V(positive_integer),
+      description => "IQ timeout (milliseconds, def: 10000ms)"},
+    #{name => coordinator_delay, default_value => 0, verification => ?V(nonnegative_integer),
+      description => "Delay after N subscriptions (milliseconds, def: 0ms)"},
+    #{name => node_creation_rate, default_value => 600, verification => ?V(positive_integer),
+      description => "Rate of node creations (per minute, def:600)"},
+    #{name => publication_size, default_value => 300, verification => ?V(nonnegative_integer),
+      description => "Size of additional payload (bytes, def:300)"},
+    #{name => publication_rate, default_value => 1500, verification => ?V(positive_integer),
+      description => "Rate of publications (per minute, def:1500)"},
+    #{name => n_of_subscribers, default_value => 50, verification => ?V(nonnegative_integer),
+      description => "Number of subscriptions for each node (def: 50)"},
+    #{name => activation_policy, default_value => all_nodes, verification => [all_nodes, n_nodes],
+      description => "Publish after subscribtion of (def: all_nodes | n_nodes)"},
+    #{name => mim_host, default_value => <<"localhost">>, verification => ?V(binary),
+      description => "The virtual host served by the server (def: <<\"localhost\">>)"},
+    #{name => pubsub_addr, default_value => <<"pubsub.localhost">>, verification => ?V(binary),
+      description => "Pubsub service address (def: <<\"pubsub.localhost\">>"}
+]).
 
 -define(GROUP_NAME, <<"pubsub_simple_coordinator">>).
 -define(NODE_CREATION_THROTTLING, node_creation).

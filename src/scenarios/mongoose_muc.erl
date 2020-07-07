@@ -8,6 +8,21 @@
 -include_lib("exml/include/exml.hrl").
 -include_lib("kernel/include/logger.hrl").
 
+-required_variable([
+    #{name => rooms_per_user, default_value => 10,
+      description => "rooms per user"},
+    #{name => users_per_room, default_value => 20,
+      description => "users per room"},
+    #{name => delay_before_sending_messages, default_value => 0,
+      description => "delay before sending messages"},
+    #{name => delay_after_entering_room, default_value => 10000,
+      description => "delay after entering room"},
+    #{name => messages_to_send_per_room, default_value => 1000,
+      description => "messages to send per room"},
+    #{name => message_interval_per_room, default_value => 1000,
+      description => "message interval per room"}
+]).
+
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init the scenario"),
@@ -172,7 +187,7 @@ ttd(Stanza, #{recv_timestamp := Recv}) ->
     Recv - binary_to_integer(SentBin).
 
 cfg(Name) ->
-    amoc_config:get(Name, default_cfg(Name)).
+    amoc_config:get(Name).
 
 room_full_jid(RoomJid, Nick) ->
     <<RoomJid/binary, $/, Nick/binary>>.
@@ -188,10 +203,3 @@ muc_host() ->
 
 ns(muc_user) ->
     <<"http://jabber.org/protocol/muc#user">>.
-
-default_cfg(delay_after_entering_room) -> 10000;
-default_cfg(delay_before_sending_messages) -> 0;
-default_cfg(messages_to_send_per_room) -> 1000;
-default_cfg(message_interval_per_room) -> 1000;
-default_cfg(rooms_per_user) -> 10;
-default_cfg(users_per_room) -> 20.
