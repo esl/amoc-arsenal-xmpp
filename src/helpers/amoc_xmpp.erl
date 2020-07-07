@@ -7,6 +7,8 @@
 
 -include_lib("kernel/include/logger.hrl").
 
+-required_variable([#{name => xmpp_servers, description => "the list of XMPP servers"}]).
+
 %% @doc connects and authenticates a user with given id and additional properties
 %% If the passed proplist is empty, a default user spec a created by
 %% make_user function is passed.
@@ -47,7 +49,7 @@ connect_or_exit(Spec) ->
 %% > AMOC_xmpp_servers="[[{host,\"127.0.0.2\"}, {port, 5222}],[{host, \"127.0.0.1\"}, {port, 5223}]]" make console
 -spec pick_server([[proplists:property()]]) -> [proplists:property()].
 pick_server(DefaultServers) ->
-    Servers = amoc_config_env:get(xmpp_servers, DefaultServers),
+    Servers = amoc_config:get(xmpp_servers, DefaultServers),
     verify(Servers),
     S = length(Servers),
     N = erlang:phash2(self(), S) + 1,
