@@ -17,11 +17,21 @@
 -include_lib("kernel/include/logger.hrl").
 
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
--required_variable({number_of_prev_neighbours,      <<"Number of users before current one to use (def: 4)"/utf8>>,             4,  nonnegative_integer}).
--required_variable({number_of_next_neighbours,      <<"Number of users after current one to use (def: 4)"/utf8>>,              4,  nonnegative_integer}).
--required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats (def: 73)"/utf8>>,    73, positive_integer}).
--required_variable({sleep_time_after_every_message, <<"Wait time between sent messages (seconds, def: 20)"/utf8>>,             20, nonnegative_integer}).
--required_variable({mim_host,                       <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>, <<"localhost">>, bitstring}).
+
+-define(V(X), fun amoc_config_validation:X/1).
+
+-required_variable([
+    #{name => number_of_prev_neighbours, default_value => 4, verification => ?V(nonnegative_integer),
+      description => "Number of users before current one to use (def: 4)"},
+    #{name => number_of_next_neighbours, default_value => 4, verification => ?V(nonnegative_integer),
+      description => "Number of users after current one to use (def: 4)"},
+    #{name => number_of_send_message_repeats, default_value => 73, verification => ?V(positive_integer),
+      description => "Number of send message (to all neighours) repeats (def: 73)"},
+    #{name => sleep_time_after_every_message, default_value => 20, verification => ?V(nonnegative_integer),
+      description => "Wait time between sent messages (seconds, def: 20)"},
+    #{name => mim_host, default_value => <<"localhost">>, verification => ?V(binary),
+      description => "The virtual host served by the server (def: <<\"localhost\">>)"}
+]).
 
 -export([start/1]).
 -export([init/0]).

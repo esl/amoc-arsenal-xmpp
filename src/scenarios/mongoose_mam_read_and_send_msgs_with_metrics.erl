@@ -16,13 +16,25 @@
 -include_lib("kernel/include/logger.hrl").
 
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
--required_variable({message_interval,               <<"Wait time between sent messages (seconds, def: 180)"/utf8>>,                  180,             nonnegative_integer}).
--required_variable({number_of_prev_users,           <<"Number of users before current one to use (def: 1)"/utf8>>,                   1,               nonnegative_integer}).
--required_variable({number_of_next_users,           <<"Number of users after current one to use (def: 1)"/utf8>>,                    1,               nonnegative_integer}).
--required_variable({number_of_send_message_repeats, <<"Number of send message (to all neighours) repeats (def: 73)"/utf8>>,          73,              positive_integer}).
--required_variable({mam_reader_sessions_indicator,  <<"How often a MAM reader is created, like every 53th session (def: 53)"/utf8>>, 53,              positive_integer}).
--required_variable({mam_read_archive_interval,      <<"Wait time between reads from MAM for each reader (seconds, def: 60)"/utf8>>,  60,              positive_integer}).
--required_variable({mim_host,                       <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>,       <<"localhost">>, bitstring}).
+
+-define(V(X), fun amoc_config_validation:X/1).
+
+-required_variable([
+    #{name => message_interval, default_value => 180, verification => ?V(nonnegative_integer),
+      description => "Wait time between sent messages (seconds, def: 180)"},
+    #{name => number_of_prev_users, default_value => 1, verification => ?V(nonnegative_integer),
+      description => "Number of users before current one to use (def: 1)"},
+    #{name => number_of_next_users, default_value => 1, verification => ?V(nonnegative_integer),
+      description => "Number of users after current one to use (def: 1)"},
+    #{name => number_of_send_message_repeats, default_value => 73, verification => ?V(positive_integer),
+      description => "Number of send message (to all neighours) repeats (def: 73)"},
+    #{name => mam_reader_sessions_indicator, default_value => 53, verification => ?V(positive_integer),
+      description => "How often a MAM reader is created, like every 53th session (def: 53)"},
+    #{name => mam_read_archive_interval, default_value => 60, verification => ?V(positive_integer),
+      description => "Wait time between reads from MAM for each reader (seconds, def: 60)"},
+    #{name => mim_host, default_value => <<"localhost">>, verification => ?V(binary),
+      description => "The virtual host served by the server (def: <<\"localhost\">>)"}
+]).
 
 %% Wait at most 5s for MAM responses (IQ or message)
 -define(MAM_STANZAS_TIMEOUT, 5000).

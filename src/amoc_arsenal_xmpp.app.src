@@ -10,7 +10,11 @@
     mnesia,
     ssl
    ]},
-  {env,[]},
+  {env, [
+   {predefined_metrics, [{times, connection},
+                         {counters, connections},
+                         {counters, connection_failures}]}
+  ]},
   {modules, []},
 
   {maintainers, []},

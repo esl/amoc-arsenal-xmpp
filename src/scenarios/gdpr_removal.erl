@@ -7,19 +7,36 @@
 -include_lib("escalus/include/escalus_xmlns.hrl").
 -include_lib("kernel/include/logger.hrl").
 
--required_variable({iq_timeout,             <<"IQ timeout (milliseconds, def: 10000ms)"/utf8>>,                                     10000,                    positive_integer}).
--required_variable({room_creation_rate,     <<"Rate of room creations (per minute, def:600)">>,                                     600,                      positive_integer}).
--required_variable({node_creation_rate,     <<"Rate of node creations (per minute, def:600)">>,                                     600,                      positive_integer}).
--required_variable({room_publication_rate,  <<"Rate of publications to room (per minute, def:1500)">>,                              1500,                     positive_integer}).
--required_variable({node_publication_rate,  <<"Rate of publications to PEP node (per minute, def:1500)">>,                          1500,                     positive_integer}).
--required_variable({room_size,              <<"Number of users in a room.">>,                                                       10,                       positive_integer}).
--required_variable({n_of_subscribers,       <<"Number of subscriptions for each node (def: 50)"/utf8>>,                             50,                       nonnegative_integer}).
--required_variable({room_activation_policy, <<"Publish after setup of (def: all_rooms | n_sers)"/utf8>>,                            all_rooms,                [all_rooms, n_rooms]}).
--required_variable({node_activation_policy, <<"Publish after setup of (def: all_nodes | n_nodes)"/utf8>>,                           all_nodes,                [all_nodes, n_nodes]}).
--required_variable({gdpr_removal_rate,      <<"Rate of user removals (per minute, def:1)">>,                                        2,                        positive_integer}).
--required_variable({publication_size,       <<"Size of additional payload (bytes, def:300)">>,                                      300,                      nonnegative_integer}).
--required_variable({mim_host,               <<"The virtual host served by the server (def: <<\"localhost\">>)"/utf8>>,              <<"localhost">>,          bitstring}).
--required_variable({muc_host,               <<"The virtual MUC host served by the server (def: <<\"muclight.localhost\">>)"/utf8>>, <<"muclight.localhost">>, bitstring}).
+-define(V(X), fun amoc_config_validation:X/1).
+
+-required_variable([
+    #{name => iq_timeout, default_value => 10000, verification => ?V(positive_integer),
+      description => "IQ timeout (milliseconds, def: 10000ms)"},
+    #{name => room_creation_rate, default_value => 600, verification => ?V(positive_integer),
+      description => "Rate of room creations (per minute, def:600)"},
+    #{name => node_creation_rate, default_value => 600, verification => ?V(positive_integer),
+      description => "Rate of node creations (per minute, def:600)"},
+    #{name => room_publication_rate, default_value => 1500, verification => ?V(positive_integer),
+      description => "Rate of publications to room (per minute, def:1500)"},
+    #{name => node_publication_rate, default_value => 1500, verification => ?V(positive_integer),
+      description => "Rate of publications to PEP node (per minute, def:1500)"},
+    #{name => room_size, default_value => 10, verification => ?V(positive_integer),
+      description => "Number of users in a room."},
+    #{name => n_of_subscribers, default_value => 50, verification => ?V(nonnegative_integer),
+      description => "Number of subscriptions for each node (def: 50)"},
+    #{name => room_activation_policy, default_value => all_rooms, verification => [all_rooms, n_rooms],
+      description => "Publish after setup of (def: all_rooms | n_sers)"},
+    #{name => node_activation_policy, default_value => all_nodes, verification => [all_nodes, n_nodes],
+      description => "Publish after setup of (def: all_nodes | n_nodes)"},
+    #{name => gdpr_removal_rate, default_value => 2, verification => ?V(positive_integer),
+      description => "Rate of user removals (per minute, def:1)"},
+    #{name => publication_size, default_value => 300, verification => ?V(nonnegative_integer),
+      description => "Size of additional payload (bytes, def:300)"},
+    #{name => mim_host, default_value => <<"localhost">>, verification => ?V(binary),
+      description => "The virtual host served by the server (def: <<\"localhost\">>)"},
+    #{name => muc_host, default_value => <<"muclight.localhost">>, verification => ?V(binary),
+      description => "The virtual MUC host served by the server (def: <<\"muclight.localhost\">>)"}
+]).
 
 -define(ROOM_CREATION_THROTTLING, room_creation).
 -define(NODE_CREATION_THROTTLING, node_creation).
