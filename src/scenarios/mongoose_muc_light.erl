@@ -20,7 +20,9 @@
     #{name => messages_to_send_per_room, default_value => 1000,
       description => "messages to send per room"},
     #{name => message_interval_per_room, default_value => 1000,
-      description => "message interval per room"}
+      description => "message interval per room"},
+    #{name => mim_host, default_value => <<"localhost">>,
+      description => "The virtual host served by the server"}
 ]).
 
 -spec init() -> ok.
@@ -51,7 +53,9 @@ start(Id) ->
     escalus_connection:wait_forever(Client).
 
 extra_user_spec() ->
-    [{sent_stanza_handlers, sent_stanza_handlers()},
+    amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
+    [{server, amoc_config:get(mim_host)},
+     {sent_stanza_handlers, sent_stanza_handlers()},
      {received_stanza_handlers, received_stanza_handlers()}].
 
 send_presence_available(Client) ->
