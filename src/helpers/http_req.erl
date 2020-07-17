@@ -1,6 +1,7 @@
 %%==============================================================================
-%% Copyright 2015 Erlang Solutions Ltd.
+%% @copyright 2015 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
 %%==============================================================================
 -module(http_req).
 

@@ -1,13 +1,16 @@
 %%==============================================================================
-%% Copyright 2019 Erlang Solutions Ltd.
+%% @copyright 2019 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
 %%
+%% @doc
 %% In this scenario users are sending messages to their neighbours
-%% (users with lower and greater IDs defined by NUMBER_OF_*_NEIGHBOURS values)
-%% Messages will be sent NUMBER_OF_SEND_MESSAGE_REPEATS to every selected neighbour
-%% after every message given the script will wait SLEEP_TIME_AFTER_EVERY_MESSAGE s
-%% Message TTD is calculated by the `received_stanza_handler`.
-%%
+%% (users with lower and greater IDs defined by `number_of_*_neighbours' values).
+%% Messages will be sent `number_of_send_message_repeats' to every selected
+%% neighbour. After every message given the script will wait
+%% `sleep_time_after_every_message' seconds.
+%% Message TTD is calculated by the `received_stanza_handler'.
+%% @end
 %%==============================================================================
 -module(mongoose_docker_one_to_one).
 
@@ -18,7 +21,7 @@
 
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
 
--define(V(X), fun amoc_config_validation:X/1).
+-define(V(X), (fun amoc_config_validation:X/1)).
 
 -required_variable([
     #{name => number_of_prev_neighbours, default_value => 4, verification => ?V(nonnegative_integer),

@@ -1,12 +1,15 @@
 %%==============================================================================
-%% Copyright 2015-2019 Erlang Solutions Ltd.
+%% @copyright 2015-2019 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
 %%
+%% @doc
 %% In this scenario users are sending message to their neighbours
-%% (users with lower and greater IDs defined by NUMBER_OF_*_NEIGHBOURS values)
-%% Messages will be send NUMBER_OF_SEND_MESSAGE_REPEATS to every selected neighbour
-%% after every message given the user will wait MESSAGE_INTERVAL s
-%%
+%% (users with lower and greater IDs defined by `number_of_*_neighbours' values).
+%% Messages will be send `number_of_send_message_repeats' to every selected
+%% neighbour after every message given the user will wait `message_interval'
+%% seconds.
+%% @end
 %%==============================================================================
 -module(mongoose_mam_read_and_send_msgs_with_metrics).
 
