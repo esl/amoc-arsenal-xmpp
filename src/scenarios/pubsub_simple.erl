@@ -1,3 +1,98 @@
+%%==============================================================================
+%% @copyright 2020 Erlang Solutions Ltd.
+%% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
+%%
+%% @doc
+%% In this scenario, users are creating pubsub nodes and publishing items.
+%% Users are publishing items to the nodes that they created and receiving items from
+%% other nodes they subscribed to. Each node has a number of subscribers limited by
+%% the `n_of_subscribers' variable. Publishing can start depending on the `activation_policy'
+%% variable, either after `all_nodes' or after `n_nodes' are subscribed to.
+%% Interactions between users and pubsub nodes are managed by the `amoc_coordinator'.
+%% Additional subscription and publication delay can be introduced with use of the
+%% `coordinator_delay' variable. This can help to moderate the load when users are
+%% being added.
+%%
+%%
+%% == User steps: ==
+%%
+%% 1. Connect to the XMPP host given by the `mim_host' variable.
+%%
+%% 2. Create pubsub node. The rate of node creation is limited by the
+%%    `node_creation_rate' per minute. The pubsub service address is defined by the
+%%    `pubsub_addr' variable. Node creation results in a timeout when `iq_timeout'
+%%    is exceeded.
+%%
+%% 3. Add user to the `amoc_coordinator' and pass pubsub node and client data.
+%%
+%% 4. Wait for the following messages in a loop:
+%%
+%% - {subscribe_to, N} - message from `amoc_coordinator' for the client to subscribe to
+%%   given Node N.
+%%
+%% - {stanza, MessageStanza} - process message stanza, check if it contains user's own jid.
+%%   If it does, schedule a `publish_item' message. The rate of these messages is handled
+%%   by `amoc_throttle' and depends on the `publication_rate' variable.
+%%
+%% - {stanza, IqStanza} - process an `iq' stanza. Whether response to publish or subscribe is received,
+%%   update the metrics accordingly.
+%%
+%% - publish_item - message from `amoc_throttle' that was scheduled after a
+%%   message stanza was received. An item is prepared with payload of `publication_size'.
+%%   User sends all messages to the same pubsub node that he created. All messages contain
+%%   the user's jid that helps to recognise the message.
+%%
+%% 5. Continue execution of the `user_loop'. If no message is received for `iq_timeout',
+%%    timeouts are calculated for every user request.
+%%
+%% == Metrics exposed by this scenario: ==
+%%
+%%   === Counters: ===
+%%     ==== Message ====
+%%       - message - incremented with every received message stanza.
+%%     ==== Node ====
+%%       - node_creation_failure - incremented when node creation failed.
+%%
+%%       - node_creation_success - incremented when node creation succeeded.
+%%
+%%       - node_creation_timeout - incremented when node creation timed out.
+%%     ==== Publication ====
+%%       - publication_query - incremented for every pubsub publication query that was sent.
+%%
+%%       - publication_result - incremented for every correct response to publication query.
+%%
+%%       - publication_error - incremented for every incorrect response to publication query.
+%%
+%%       - publication_success - incremented for every correct response to publication query
+%%         which didn't timeout.
+%%
+%%       - publication_timeout - incremented for every correct response to publication query
+%%         that timeout.
+%%     ==== Subscription ====
+%%       - subscription_query - incremented for every subscription query that was sent.
+%%
+%%       - subscription_result - incremented for every correct response to subscription query.
+%%
+%%       - subscription_error - incremented for every incorrect response to subscription query.
+%%
+%%       - subscription_success - incremented for every correct response to subscription query
+%%         which didn't timeout.
+%%
+%%       - subscription_timeout - incremented for every correct response to subscription query
+%%         that timeout.
+%%
+%%  === Times: ===
+%%   - node_creation - time for the pubsub node to be created
+%%
+%%   - subscription - time to subscribe to pubsub node
+%%
+%%   - publication - time to publish pubsub item
+%%
+%%   - message_tdd - message time to delivery
+%%
+%% @end
+%%==============================================================================
 -module(pubsub_simple).
 
 -behaviour(amoc_scenario).
