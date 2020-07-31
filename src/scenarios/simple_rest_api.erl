@@ -1,3 +1,28 @@
+%%==============================================================================
+%% @copyright 2020 Erlang Solutions Ltd.
+%% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
+%%
+%% @doc
+%% In this scenario users are sending messages using the REST client API.
+%%
+%% == User steps: ==
+%%
+%% 0. Choose a role based on the user ID. Half of the users send messages via
+%% the REST API, the other half receives them through XMPP.
+%%
+%% === REST users ===
+%% 1. Send one message via the REST API.
+%%
+%% === XMPP users ===
+%% 1. Connect to the XMPP host.
+%%
+%% 2. Send presence `available'.
+%%
+%% 3. Wait for incoming messages and log them.
+%%
+%% @end
+%%==============================================================================
 -module(simple_rest_api).
 
 -behaviour(amoc_scenario).
