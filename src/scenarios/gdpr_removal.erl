@@ -1,3 +1,149 @@
+%%==============================================================================
+%% @copyright 2020 Erlang Solutions Ltd.
+%% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
+%%
+%% @doc
+%% In this scenario, users are communicating using PEP and MUC Light, while GDPR
+%% removal requests are performed.
+%%
+%% Users are publishing items to their PEP nodes and receiving items from other
+%% users' nodes. Each node has a number of subscribers limited by the
+%% `n_of_subscribers' variable. Publishing can start depending on the
+%% `node_activation_policy' variable, either after `all_nodes' or after
+%% `n_nodes' are subscribed to. Similarly, users send and receive messages from
+%% MUC Light rooms. Each room has `room_size' users, and sending messages to
+%% rooms can start depending on the `room_activation_policy'. Interactions
+%% between users, pubsub PEP nodes and MUC Light rooms are managed by the
+%% `amoc_coordinator'.
+%%
+%% == User steps: ==
+%%
+%% 1. Connect to the XMPP host given by the `mim_host' variable.
+%%
+%% 2. Create a PEP node and send presence `available', in order to receive
+%%    messages from the PEP nodes. The rate of nodes' creation is limited by the
+%%    `node_creation_rate' per minute. Node creation results in a timeout when
+%%    `iq_timeout' is exceeded.
+%%
+%% 3. Create a MUC Light room. The rate of rooms' creation is limited by the
+%%    `room_creation_rate' per minute. The virtual MUC host is defined by the
+%%    `muc_host' variable. Room creation counts as a timeout when `iq_timeout'
+%%    is exceeded.
+%%
+%% 4. Wait for the following messages in a loop:
+%%
+%% - {publish_item_room, RoomJid} - message from `amoc_coordinator', sent after
+%%   users have created their rooms, or from `amoc_throttle', scheduled after
+%%   receiving a groupchat message from self.
+%%   Send a groupchat message to the Room. Size of this message is defined by
+%%   the `publication_size' variable. The rate of `publish_item_room' messages
+%%   is handled by `amoc_throttle' and depends on the `room_publication_rate'
+%%   variable.
+%%
+%% - publish_item_node - a message analogous to the `publish_item_room' message.
+%%   Send a message, which size is defined by the `publication_size' variable,
+%%   to the PEP node. The rate of these `publish_item_node' messages is handled
+%%   by `amoc_throttle' and depends on the `node_publication_rate' variable.
+%%
+%% - {add_users, MemberJids} - message from `amoc_coordinator', sent after it
+%%   had grouped `room_size' users together. Add users with given jids to own
+%%   MUC Light room as members.
+%%
+%% - remove_user - send a GDPR removal request and quit scenario execution for
+%%   this user. The rate of these messages is handled by `amoc_throttle' and
+%%   depends on the `gdpr_removal_rate' variable. They should start being sent
+%%   after all users have logged in.
+%%
+%% - {stanza, _, MsgStanza, TimeStamp} - process either a pubsub or a groupchat
+%%   message and update corresponding metrics. If it's the first MUC Light
+%%   affiliation message, remember the randomly generated RoomJid. Discard all
+%%   other affiliation change messages. In the case of a pubsub message, check
+%%   if it contains user's own jid. If it does, schedule a `publish_item_node'
+%%   message. Similarly for a MUC Light message: check if it contains user's own
+%%   jid and if it does, schedule a `publish_item_room' message.
+%%
+%% - {stanza, _, IqStanza, TimeStamp} - process an `iq' stanza and update
+%%   corresponding metrics. In the case of an iq result for the room creation,
+%%   send client data to the coordinator, which informs that the user is ready
+%%   to send groupchat messages.
+%%
+%% - {stanza, _, PresenceStanza, TimeStamp} - respond to the `subscribe'
+%%   presence stanzas.
+%%
+%% 5. Continue execution of the `user_loop'. If no message is received for
+%%    `iq_timeout', timeouts are calculated for every user request.
+%%
+%% == Metrics exposed by this scenario: ==
+%%
+%%   === Counters: ===
+%%     ==== Message ====
+%%       - pubsub_message - incremented with every message stanza received from
+%%         pubsub PEP.
+%%
+%%       - muc_light_message - incremented with every message stanza received
+%%         from MUC Light.
+%%
+%%       - muc_light_message_sent - incremented with every message sent to the
+%%         room.
+%%
+%%       - muc_light_affiliation_change_messages - incremented with every
+%%         affiliation change message from MUC Light.
+%%     ==== Node ====
+%%       - node_creation_success - incremented when node creation succeeded.
+%%
+%%       - node_creation_failure - incremented when node creation failed.
+%%
+%%       - node_creation_timeout - incremented when node creation timed out.
+%%     ==== Room ====
+%%       - room_creation_success - incremented when room creation succeeded.
+%%
+%%       - room_creation_failure - incremented when room creation failed.
+%%
+%%       - room_creation_timeout - incremented when room creation timed out.
+%%
+%%       - room_affiliation_change_success - incremented when room creation
+%%         failed.
+%%
+%%       - room_affiliation_change_failure - incremented when room creation
+%%         succeeded.
+%%
+%%       - room_affiliation_change_timeout - incremented when room creation
+%%         timed out.
+%%     ==== Publication ====
+%%       - publication_query - incremented for every pubsub publication query
+%%         that was sent.
+%%
+%%       - publication_result - incremented for every correct response to
+%%         publication query.
+%%
+%%       - publication_error - incremented for every incorrect response to
+%%         publication query.
+%%
+%%       - publication_success - incremented for every correct response to
+%%         publication query which didn't timeout.
+%%
+%%       - publication_timeout - incremented for every correct response to
+%%         publication query that timeout.
+%%     ==== GDPR ====
+%%       - gdpr_removal - incremented when a user is removed.
+%%  === Times: ===
+%%   - room_creation - time for the MUC Light room to be created.
+%%
+%%   - node_creation - time for the pubsub PEP node to be created.
+%%
+%%   - pubsub_publication - time to publish a pubsub item.
+%%
+%%   - pubsub_message_ttd - message time to delivery for pubsub.
+%%
+%%   - muc_light_ttd - message time to delivery for MUC Light.
+%%
+%%   - room_affiliation_change - time to change room affiliation.
+%%
+%%   - gdpr_removal - time to perform the GDPR removal request.
+%%
+%% @end
+%%==============================================================================
 -module(gdpr_removal).
 
 -behaviour(amoc_scenario).
@@ -90,7 +236,8 @@ init_metrics() ->
 
         muc_light_affiliation_change_messages,
 
-        room_affiliation_change_success, room_affiliation_change_timeout, room_affiliation_change_failure,
+        room_affiliation_change_success, room_affiliation_change_timeout,
+        room_affiliation_change_failure,
 
         gdpr_removal],
     Times = [room_creation, node_creation,
@@ -308,7 +455,7 @@ create_pubsub_node(Client) ->
 
     case {escalus_pred:is_iq_result(Request, CreateNodeResult), CreateNodeResult} of
         {true, _} ->
-%%            ?LOG_DEBUG("node creation ~p (~p)", [?NODE, self()]),
+            ?LOG_DEBUG("node creation ~p (~p)", [?NODE, self()]),
             amoc_metrics:update_counter(node_creation_success),
             amoc_metrics:update_time(node_creation, CreateNodeTime);
         {false, {'EXIT', {timeout_when_waiting_for_stanza, _}}} ->
@@ -445,8 +592,7 @@ process_muc_light_message(Stanza, RecvTimeStamp) ->
         undefined ->
             handle_normal_muc_light_message(Stanza, RecvTimeStamp);
         #xmlel{name = <<"x">>, attrs = [{<<"xmlns">>, ?NS_MUC_LIGHT_AFFILIATIONS}], children = _} ->
-            handle_muc_light_affiliation_message(Stanza),
-            amoc_metrics:update_counter(muc_light_affiliation_change_messages);
+            handle_muc_light_affiliation_message(Stanza);
         _ -> ?LOG_ERROR("Unknown message.")
     end.
 
@@ -546,7 +692,7 @@ send_info_to_coordinator(Client) ->
 handle_affiliation_change_iq(AffiliationChangeResult, {Tag, AffiliationChangeTime}) ->
     case {escalus_pred:is_iq_result(AffiliationChangeResult), AffiliationChangeResult} of
         {true, _} ->
-            ?LOG_DEBUG("Room creation ~p took ~p", [self(), AffiliationChangeTime]),
+            ?LOG_DEBUG("Adding users to room ~p took ~p", [self(), AffiliationChangeTime]),
             amoc_metrics:update_time(room_affiliation_change, AffiliationChangeTime),
             IqTimeout = amoc_config:get(iq_timeout),
             case Tag of
