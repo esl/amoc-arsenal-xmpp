@@ -1,3 +1,71 @@
+%==============================================================================
+%% @copyright 2020 Erlang Solutions Ltd.
+%% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
+%%
+%% @doc
+%% In this scenario, users are creating PEP nodes and publishing items.
+%% Users are publishing items to their PEP nodes and receiving items from other
+%% users' nodes. Each node has a number of subscribers limited by the
+%% `n_of_subscribers' variable. Publishing can start depending on the
+%% `node_activation_policy' variable, either after `all_nodes' or after `n_nodes'
+%% are subscribed to. Interactions between users and pubsub PEP nodes are managed
+%% by the `amoc_coordinator'. Additional subscription and publication delay can
+%% be introduced with use of the `coordinator_delay' variable. This can help to
+%% moderate the load when users are being added.
+%%
+%% == User steps: ==
+%%
+%% 1. Connect to the XMPP host given by the `mim_host' variable.
+%%
+%% 2. Create a PEP node and send presence `available', in order to receive
+%%    messages from the PEP nodes. The rate of node creation is limited by the
+%%    `node_creation_rate' per minute. Node creation results in a timeout when
+%%    `iq_timeout' is exceeded.
+%%
+%% 3. Add user to the `amoc_coordinator' and pass client data.
+%%
+%% 4. Wait for the following messages in a loop:
+%%
+%% - {stanza, MessageStanza} - process message stanza, check if it contains user's own jid.
+%%   If it does, schedule a `publish_item' message. The rate of these messages is handled
+%%   by `amoc_throttle' and depends on the `publication_rate' variable.
+%%
+%% - {stanza, IqStanza} - process an `iq' stanza and update corresponding metrics.
+%%
+%% - {stanza, PresenceStanza} - respond to the `subscribe' presence stanzas.
+%%
+%% - publish_item - message from `amoc_throttle' that was scheduled after a
+%%   message stanza was received. Send a message, which size is defined by the
+%%   `publication_size' variable, to the PEP node. The rate of these `publish_item_node'
+%%   messages is handled by `amoc_throttle' and depends on the `node_publication_rate'
+%%   variable.
+%%
+%% 5. Continue execution of the `user_loop'.
+%%
+%% == Metrics exposed by this scenario: ==
+%%
+%%   === Counters: ===
+%%     ==== node_creation ====
+%%       - node_creation has following counter metrics exposed: `request', `response',
+%%         `timeout', `response result', `response error', `timeout result',
+%%         `timeout error'
+%%     ==== publication ====
+%%       - publication has following counter metrics exposed: `request', `response',
+%%         `timeout', `response result', `response error', `timeout result',
+%%         `timeout error'
+%%     ==== message ====
+%%       - message - incremented with every received message stanza.
+%%
+%%  === Times: ===
+%%   - node_creation - time for the pubsub node to be created
+%%
+%%   - publication - time to publish pubsub item
+%%
+%%   - message_tdd - message time to delivery
+%%
+%% @end
+%%==============================================================================
 -module(pubsub_pep).
 
 -behaviour(amoc_scenario).
