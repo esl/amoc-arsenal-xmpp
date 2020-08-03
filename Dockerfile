@@ -11,9 +11,10 @@ RUN apt-get update && \
         clang \
         libexpat1-dev \
         wget \
+        gnupg \
         iproute2 && \
-    wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && \
-    dpkg -i erlang-solutions_1.0_all.deb && \
+    wget https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb && \
+    dpkg -i erlang-solutions_2.0_all.deb && \
     apt-get update && \
     apt-get install -y esl-erlang=1:${otp_vsn}
 
