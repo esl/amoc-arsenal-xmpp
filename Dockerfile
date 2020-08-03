@@ -1,4 +1,4 @@
-FROM phusion/baseimage AS builder
+FROM phusion/baseimage:bionic-1.0.0 AS builder
 
 ARG otp_vsn=21.3.8.7-1
 
@@ -22,7 +22,7 @@ COPY . /amoc_arsenal_build
 RUN cd amoc_arsenal_build && \
     ./rebar3 release
 
-FROM phusion/baseimage
+FROM phusion/baseimage:bionic-1.0.0
 MAINTAINER Erlang Solutions <mongoose-im@erlang-solutions.com>
 
 ARG vsn
