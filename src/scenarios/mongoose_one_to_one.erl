@@ -1,5 +1,5 @@
 %%==============================================================================
-%% @copyright 2020 Erlang Solutions Ltd.
+%% @copyright 2019-2020 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %% @end
 %%

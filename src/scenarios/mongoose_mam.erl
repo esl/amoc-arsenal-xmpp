@@ -1,5 +1,5 @@
 %%==============================================================================
-%% @copyright 2020 Erlang Solutions Ltd.
+%% @copyright 2019-2020 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %% @end
 %%
@@ -355,4 +355,3 @@ is_mam_fin_complete_message(#xmlel{} = Stanza) ->
             exml_query:attr(FinEl, <<"xmlns">>) == ?NS_MAM andalso
                 exml_query:attr(FinEl, <<"complete">>) == <<"true">>
     end.
-

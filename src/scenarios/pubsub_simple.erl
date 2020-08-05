@@ -1,5 +1,5 @@
 %%==============================================================================
-%% @copyright 2020 Erlang Solutions Ltd.
+%% @copyright 2019-2020 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %% @end
 %%
@@ -28,15 +28,15 @@
 %%
 %% 4. Wait for the following messages in a loop:
 %%
-%% - {subscribe_to, N} - message from `amoc_coordinator' for the client to subscribe to
-%%   given Node N.
+%% - {subscribe_to, N} - message from `amoc_coordinator' for the client to subscribe
+%%   to the given Node N.
 %%
-%% - {stanza, MessageStanza} - process message stanza, check if it contains user's own jid.
-%%   If it does, schedule a `publish_item' message. The rate of these messages is handled
-%%   by `amoc_throttle' and depends on the `publication_rate' variable.
+%% - {stanza, MessageStanza} - process message stanza, check if it contains the user's
+%%   own jid. If it does, schedule a `publish_item' message. The rate of these messages
+%%   is handled by `amoc_throttle' and depends on the `publication_rate' variable.
 %%
-%% - {stanza, IqStanza} - process an `iq' stanza. Whether response to publish or subscribe is received,
-%%   update the metrics accordingly.
+%% - {stanza, IqStanza} - process an `iq' stanza. Whether response to publish or
+%%   subscribe is received, update the metrics accordingly.
 %%
 %% - publish_item - message from `amoc_throttle' that was scheduled after a
 %%   message stanza was received. An item is prepared with payload of `publication_size'.

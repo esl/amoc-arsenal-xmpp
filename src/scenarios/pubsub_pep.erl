@@ -1,5 +1,5 @@
 %==============================================================================
-%% @copyright 2020 Erlang Solutions Ltd.
+%% @copyright 2019-2020 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %% @end
 %%
@@ -27,9 +27,10 @@
 %%
 %% 4. Wait for the following messages in a loop:
 %%
-%% - {stanza, MessageStanza} - process message stanza, check if it contains user's own jid.
-%%   If it does, schedule a `publish_item' message. The rate of these messages is handled
-%%   by `amoc_throttle' and depends on the `publication_rate' variable.
+%% - {stanza, MessageStanza} - process message stanza, check if it contains the
+%%   user's own jid. If it does, schedule a `publish_item' message. The rate of
+%%   these messages is handled by `amoc_throttle' and depends on the
+%%   `publication_rate' variable.
 %%
 %% - {stanza, IqStanza} - process an `iq' stanza and update corresponding metrics.
 %%

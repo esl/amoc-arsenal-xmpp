@@ -1,5 +1,5 @@
 %==============================================================================
-%% @copyright 2020 Erlang Solutions Ltd.
+%% @copyright 2019-2020 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %% @end
 %%
@@ -18,8 +18,8 @@
 %%
 %% 4. Wait for the `delay_before_sending_messages'.
 %%
-%% 5. Start sending messages to the one selected MUC rooms. The number of messages
-%%    to be sent per room is defined by the `messaged_to_send_per_room' variable.
+%% 5. Start sending messages to the selected MUC rooms. The number of messages
+%%    to be sent per room is defined by the `messages_to_send_per_room' variable.
 %%    The rate of messages that is being sent is defined by the
 %%    `message_interval_per_room' variable.
 %%

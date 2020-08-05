@@ -9,7 +9,7 @@
 
 -required_variable([#{name => xmpp_servers, description => "the list of XMPP servers"}]).
 
-%% @doc Connects and authenticates a user with given id and additional properties.
+%% @doc Connects and authenticates a user with the given id and additional properties.
 %% If the passed proplist is empty, a default user spec created by
 %% make_user function is passed.
 %% If the proplist is not empty it will be merged with the default props.
@@ -21,7 +21,7 @@ connect_or_exit(Id, ExtraSpec) ->
     Spec = make_user(Id, ExtraSpec),
     connect_or_exit(Spec).
 
-%% @doc Connects and authenticates a users based on passed user spec.
+%% @doc Connects and authenticates a user based on the given user spec.
 %% This function exits if the connection or authentication was not successful.
 -spec connect_or_exit(escalus_users:user_spec()) ->
     {ok, escalus_connection:client(), escalus_users:user_spec()}.
@@ -38,7 +38,7 @@ connect_or_exit(Spec) ->
             exit(connection_failed)
     end.
 
-%% @doc Picks a random server based on config var `xmpp_servers'.
+%% @doc Picks a random server based on the config var `xmpp_servers'.
 %% This function expects a list of proplists defining the endpoint
 %% to which an XMPP client can connect, for instance:
 %% [[{host, "127.0.0.1"}, {port, 5222}], [{host, "127.0.0.1"}, {port, 5223}]]

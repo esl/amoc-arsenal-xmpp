@@ -1,5 +1,5 @@
 %%==============================================================================
-%% @copyright 2020 Erlang Solutions Ltd.
+%% @copyright 2019-2020 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %% @end
 %%
@@ -766,4 +766,3 @@ get_sender_bare_jid(Stanza) ->
     From = exml_query:attr(Stanza, <<"from">>),
     [BareJid | _] = binary:split(From, <<"/">>),
     BareJid.
-

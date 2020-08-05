@@ -1,5 +1,5 @@
 %%==============================================================================
-%% @copyright 2020 Erlang Solutions Ltd.
+%% @copyright 2019-2020 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
 %% @end
 %%
@@ -80,4 +80,3 @@ auth_header(Id) ->
 xmpp_or_rest(MyId) ->
     Id = MyId rem 2 + 1,
     element(Id, {rest, xmpp}).
-
