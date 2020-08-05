@@ -1,14 +1,67 @@
 %%==============================================================================
-%% Copyright 2015-2019 Erlang Solutions Ltd.
+%% @copyright 2019-2020 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
 %%
-%% In this scenario users are sending message to their neighbours
-%% (users with lower and greater IDs defined by NUMBER_OF_*_NEIGHBOURS values)
-%% Messages will be send NUMBER_OF_SEND_MESSAGE_REPEATS to every selected neighbour
-%% after every message given the user will wait MESSAGE_INTERVAL s
+%% @doc
+%% In this scenario users are sending multiple messages to their neighbours in
+%% intervals while some are reading messages from MAM.
 %%
+%% == User steps: ==
+%%
+%% 1. Connect to the XMPP host given by the `mim_host' variable.
+%%
+%% 2. Choose a role based on the user ID. Every `mam_reader_sessions_indicator'
+%% a user will be assigned the role of `mam_reader'. Other users will become
+%% `senders', who send normal messages.
+%%
+%% === Sender users ===
+%%
+%% 3. Set filter on incoming stanzas so that only messages are received.
+%%
+%% 4. Send presence `available' and wait for 5 seconds.
+%%
+%% 5. Select neighbouring users with lower and greater IDs defined by the
+%% `number_of_prev_users' and `number_of_next_users' values.
+%%
+%% 6. Send messages to every neighbour multiple times (defined by
+%% `number_of_send_message_repeats') in a round-robin fashion. After each
+%% message wait for `message_interval'.
+%%
+%% 7. Having sent all messages wait for 10 seconds before sending presence
+%% `unavailable' and disconnect.
+%%
+%% === MAM readers ===
+%%
+%% 3. Send presence `available'.
+%%
+%% 4. In a loop, read message archive divided into chunks based on a timestamp.
+%% Set filter for iq and message stanzas, query messages from MAM from the last
+%% timestamp and receive results. Log received messages and update corresponding
+%% metrics. After the end of messages from the message archive set filtering
+%% back to messages only and wait for `mam_read_archive_interval'.
+%%
+%% 5. Continue execution in the loop from point 4.
+%%
+%% == Metrics exposed by this scenario: ==
+%%
+%%   === Counters: ===
+%%     - messages_sent - it is updated with every sent message by the
+%%     `amoc_xmpp_handlers:measure_sent_messages/0' handler.
+%%
+%%     - mam_lookups - updated with every successful MAM lookup.
+%%
+%%     - mam_failed_lookups - updated with every failed MAM lookup.
+%%
+%%   === Times: ===
+%%     - message_ttd - it is updated with every received message by the
+%%     `amoc_xmpp_handlers:measure_ttd/3' handler.
+%%
+%%     - mam_lookup_response_time - updated with every successful MAM lookup.
+%%
+%% @end
 %%==============================================================================
--module(mongoose_mam_read_and_send_msgs_with_metrics).
+-module(mongoose_mam).
 
 -behaviour(amoc_scenario).
 
@@ -302,4 +355,3 @@ is_mam_fin_complete_message(#xmlel{} = Stanza) ->
             exml_query:attr(FinEl, <<"xmlns">>) == ?NS_MAM andalso
                 exml_query:attr(FinEl, <<"complete">>) == <<"true">>
     end.
-

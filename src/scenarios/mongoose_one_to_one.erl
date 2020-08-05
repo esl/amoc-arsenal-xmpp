@@ -1,15 +1,43 @@
 %%==============================================================================
-%% Copyright 2019 Erlang Solutions Ltd.
+%% @copyright 2019-2020 Erlang Solutions Ltd.
 %% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
 %%
-%% In this scenario users are sending messages to their neighbours
-%% (users with lower and greater IDs defined by NUMBER_OF_*_NEIGHBOURS values)
-%% Messages will be sent NUMBER_OF_SEND_MESSAGE_REPEATS to every selected neighbour
-%% after every message given the script will wait SLEEP_TIME_AFTER_EVERY_MESSAGE s
-%% Message TTD is calculated by the `received_stanza_handler`.
+%% @doc
+%% In this scenario users are sending multiple messages to their neighbours in
+%% intervals.
 %%
+%% == User steps: ==
+%%
+%% 1. Connect to the XMPP host given by the `mim_host' variable.
+%%
+%% 2. Set filter on incoming stanzas so that only messages are received.
+%%
+%% 3. Send presence `available' and wait for 5 seconds.
+%%
+%% 4. Select neighbouring users with lower and greater IDs defined by the
+%% `number_of_prev_neighbours' and `number_of_next_neighbours' values.
+%%
+%% 5. Send messages to every neighbour multiple times (defined by
+%% `number_of_send_message_repeats') in a round-robin fashion. After each
+%% message wait for `sleep_time_after_every_message'.
+%%
+%% 6. Having sent all messages wait for 10 seconds before sending presence
+%% `unavailable' and disconnect.
+%%
+%% == Metrics exposed by this scenario: ==
+%%
+%%   === Counters: ===
+%%     - messages_sent - it is updated with every sent message by the
+%%     `amoc_xmpp_handlers:measure_sent_messages/0' handler.
+%%
+%%   === Times: ===
+%%     - message_ttd - it is updated with every received message by the
+%%     `amoc_xmpp_handlers:measure_ttd/3' handler.
+%%
+%% @end
 %%==============================================================================
--module(mongoose_docker_one_to_one).
+-module(mongoose_one_to_one).
 
 -behaviour(amoc_scenario).
 
@@ -18,7 +46,7 @@
 
 -define(SLEEP_TIME_AFTER_SCENARIO, 10000). %% wait 10s after scenario before disconnecting
 
--define(V(X), fun amoc_config_validation:X/1).
+-define(V(X), (fun amoc_config_validation:X/1)).
 
 -required_variable([
     #{name => number_of_prev_neighbours, default_value => 4, verification => ?V(nonnegative_integer),

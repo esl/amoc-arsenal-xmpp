@@ -1,3 +1,55 @@
+%==============================================================================
+%% @copyright 2019-2020 Erlang Solutions Ltd.
+%% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
+%%
+%% @doc
+%% In this scenario, users are entering MUC Rooms and exchanging messages.
+%% Each room has one sender.
+%%
+%% == User steps: ==
+%%
+%% 1. Connect to the XMPP host.
+%%
+%% 2. Send presence `available'.
+%%
+%% 3. Enter selected MUC rooms. After each entered room, wait for
+%%    `delay_after_entering_room' before joining another MUC room.
+%%
+%% 4. Wait for the `delay_before_sending_messages'.
+%%
+%% 5. Start sending messages to the selected MUC rooms. The number of messages
+%%    to be sent per room is defined by the `messages_to_send_per_room' variable.
+%%    The rate of messages that is being sent is defined by the
+%%    `message_interval_per_room' variable.
+%%
+%% 6. Receive messages, notifications and presences from the MUC rooms and update
+%%    the metrics accordingly.
+%%
+%% == Metrics exposed by this scenario: ==
+%%
+%%  === Counters: ===
+%%    - muc_rooms_created - incremented for every MUC room that has been created.
+%%
+%%    - muc_occupants - incremented for every user that joins a MUC room.
+%%
+%%    - muc_messages_sent - incremented for every MUC message that is being sent.
+%%
+%%    - muc_messages_received - incremented for every MUC message that is being received.
+%%
+%%    - muc_presences_received - incremented for every received MUC presence.
+%%
+%%    - muc_notifications_received - incremented for every received MUC notification.
+%%
+%%    - timeouts - incremented for every request that resulted in a timeout.
+%%
+%%  === Times: ===
+%%   - response - response time for every request that was sent.
+%%
+%%   - muc_message_tdd - MUC message time to delivery
+%%
+%% @end
+%%==============================================================================
 -module(mongoose_muc).
 
 -behaviour(amoc_scenario).

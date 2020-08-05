@@ -1,3 +1,53 @@
+%==============================================================================
+%% @copyright 2019-2020 Erlang Solutions Ltd.
+%% Licensed under the Apache License, Version 2.0 (see LICENSE file)
+%% @end
+%%
+%% @doc
+%% In this scenario, users are creating MUC light Rooms. Users are being added
+%% to these rooms and receiving messages from the user that created the room.
+%%
+%% == User steps: ==
+%%
+%% 1. Connect to the XMPP host given by the `mim_host' variable.
+%%
+%% 2. Send presence `available'.
+%%
+%% 3. Create MUC light rooms and add its members. After each created room,
+%%    wait for `delay_after_creating_room' before creating another room.
+%%
+%% 4. Wait for the `delay_before_sending_messages'.
+%%
+%% 5. Start sending messages to the rooms created. The number of messages
+%%    to be sent per room is defined by the `messages_to_send_per_room' variable.
+%%    The rate of messages that is being sent is defined by the
+%%    `message_interval_per_room' variable.
+%%
+%% 6. Receive messages and notifications from the affiliated MUC light rooms
+%%    and update the metrics accordingly.
+%%
+%% == Metrics exposed by this scenario: ==
+%%
+%%  === Counters: ===
+%%    - muc_rooms_created - incremented for every MUC room that has been created.
+%%
+%%    - muc_occupants - incremented for every user that joins a MUC room.
+%%
+%%    - muc_messages_sent - incremented for every MUC message that is being sent.
+%%
+%%    - muc_messages_received - incremented for every MUC message that is being received.
+%%
+%%    - muc_notifications_received - incremented for every received MUC notification.
+%%
+%%    - timeouts - incremented for every request that resulted in a timeout.
+%%
+%%  === Times: ===
+%%   - response - response time for every request that was sent.
+%%
+%%   - muc_message_tdd - MUC message time to delivery
+%%
+%% @end
+%%==============================================================================
 -module(mongoose_muc_light).
 
 -behaviour(amoc_scenario).
@@ -20,7 +70,9 @@
     #{name => messages_to_send_per_room, default_value => 1000,
       description => "messages to send per room"},
     #{name => message_interval_per_room, default_value => 1000,
-      description => "message interval per room"}
+      description => "message interval per room"},
+    #{name => mim_host, default_value => <<"localhost">>,
+      description => "The virtual host served by the server"}
 ]).
 
 -spec init() -> ok.
@@ -51,7 +103,9 @@ start(Id) ->
     escalus_connection:wait_forever(Client).
 
 extra_user_spec() ->
-    [{sent_stanza_handlers, sent_stanza_handlers()},
+    amoc_xmpp:pick_server([[{host, "127.0.0.1"}]]) ++
+    [{server, amoc_config:get(mim_host)},
+     {sent_stanza_handlers, sent_stanza_handlers()},
      {received_stanza_handlers, received_stanza_handlers()}].
 
 send_presence_available(Client) ->
