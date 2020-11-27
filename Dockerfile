@@ -1,4 +1,4 @@
-FROM phusion/baseimage AS builder
+FROM phusion/baseimage:18.04-1.0.0 AS builder
 
 ARG otp_vsn=21.3.8.7-1
 
@@ -11,7 +11,8 @@ RUN apt-get update && \
         clang \
         libexpat1-dev \
         wget \
-        iproute2 && \
+        iproute2 \
+        gnupg && \
     wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb && \
     dpkg -i erlang-solutions_1.0_all.deb && \
     apt-get update && \
@@ -22,7 +23,7 @@ COPY . /amoc_arsenal_build
 RUN cd amoc_arsenal_build && \
     ./rebar3 release
 
-FROM phusion/baseimage
+FROM phusion/baseimage:18.04-1.0.0
 MAINTAINER Erlang Solutions <mongoose-im@erlang-solutions.com>
 
 ARG vsn
