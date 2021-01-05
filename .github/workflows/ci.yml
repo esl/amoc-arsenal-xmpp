@@ -18,6 +18,8 @@
        matrix:
          otp: ['22.0', '21.3']
      runs-on: 'ubuntu-20.04'
+     env:
+       TRAVIS_OTP_RELEASE: ${{ matrix.otp }}
      steps:
        - uses: actions/checkout@v2
          with:
