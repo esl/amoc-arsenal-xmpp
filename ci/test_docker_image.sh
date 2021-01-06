@@ -18,8 +18,8 @@ docker run -t -d --name amoc-arsenal-2 -h amoc-arsenal-2 --network ${NETWORK} \
            -e AMOC_NODES="${AMOC_NODES}" --health-cmd="${PATH_TO_EXEC} status" \
 	       amoc-arsenal-xmpp:latest
 
-./travis/wait_for_healthcheck.sh amoc-arsenal-1
-./travis/wait_for_healthcheck.sh amoc-arsenal-2
+./ci/wait_for_healthcheck.sh amoc-arsenal-1
+./ci/wait_for_healthcheck.sh amoc-arsenal-2
 
 docker exec -t amoc-arsenal-1 ${PATH_TO_EXEC} eval "nodes()" | grep amoc-arsenal-2
 docker exec -t amoc-arsenal-2 ${PATH_TO_EXEC} eval "nodes()" | grep amoc-arsenal-1

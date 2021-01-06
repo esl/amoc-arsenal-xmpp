@@ -19,7 +19,7 @@
          otp: ['22.0', '21.3']
      runs-on: 'ubuntu-20.04'
      env:
-       TRAVIS_OTP_RELEASE: ${{ matrix.otp }}
+       OTP_RELEASE: ${{ matrix.otp }}
      steps:
        - uses: actions/checkout@v2
          with:
@@ -28,12 +28,12 @@
          with:
            otp-version: ${{ matrix.otp }}
        - name: Compile project
-         run: rebar3 compile
+         run: ./rebar3 compile
        - name: run xref check
-         run: rebar3 xref
+         run: ./rebar3 xref
        - name: run dializer check
-         run: rebar3 dialyzer
+         run: ./rebar3 dialyzer
        - name: build docker image
-         run: ./travis/build_docker_image.sh
+         run: ./ci/build_docker_image.sh
        - name: test docker image
-         run: ./travis/test_docker_image.sh
+         run: ./ci/test_docker_image.sh
