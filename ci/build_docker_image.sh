@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Get current repo version
-VERSION="$(git rev-parse --short HEAD)"
-OTP_VSN="${OTP_RELEASE}-1"
-echo "ERLANG/OTP ${OTP_VSN}"
+version="$(git rev-parse --short HEAD)"
+otp_vsn="1:${OTP_RELEASE:-22.3}-1"
+echo "ERLANG/OTP ${otp_vsn}"
+echo "AMOC-ARSENAL-XMPP ${version}"
 
 docker build \
 	-f Dockerfile \
-	-t "amoc-arsenal-xmpp:${VERSION}" \
+	-t "amoc-arsenal-xmpp:${version}" \
 	-t "amoc-arsenal-xmpp:latest" \
-	--build-arg vsn="${VERSION}" \
-	--build-arg otp_vsn="${OTP_VSN}" \
+	--build-arg otp_vsn="${otp_vsn}" \
 	.

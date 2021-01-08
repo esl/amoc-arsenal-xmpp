@@ -5,23 +5,34 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-NETWORK=amoc-arsenal-test-network
-PATH_TO_EXEC=/home/amoc/amoc_arsenal_xmpp/bin/amoc_arsenal_xmpp
-AMOC_NODES="['amoc_arsenal_xmpp@amoc-arsenal-1','amoc_arsenal_xmpp@amoc-arsenal-1']"
-docker network create ${NETWORK}
+network="amoc-arsenal-test-network"
+path_to_exec="/home/amoc/amoc_arsenal_xmpp/bin/amoc_arsenal_xmpp"
+amoc_nodes="['amoc_arsenal_xmpp@amoc-arsenal-1']"
+number_of_nodes=3
 
-docker run -t -d --name amoc-arsenal-1 -h amoc-arsenal-1 --network ${NETWORK} \
-           -e AMOC_NODES="${AMOC_NODES}" --health-cmd="${PATH_TO_EXEC} status" \
-           amoc-arsenal-xmpp:latest
+docker network create "${network}"
 
-docker run -t -d --name amoc-arsenal-2 -h amoc-arsenal-2 --network ${NETWORK} \
-           -e AMOC_NODES="${AMOC_NODES}" --health-cmd="${PATH_TO_EXEC} status" \
-	       amoc-arsenal-xmpp:latest
+for i in $(seq 1 "$number_of_nodes"); do
+  name="amoc-arsenal-$i"
+  docker run -td --rm -e AMOC_NODES="${amoc_nodes}" \
+             --name "$name" -h "$name" --network "${network}" \
+             --health-cmd="\"${path_to_exec}\" status" \
+             amoc-arsenal-xmpp:latest
+done
 
-./ci/wait_for_healthcheck.sh amoc-arsenal-1
-./ci/wait_for_healthcheck.sh amoc-arsenal-2
+for i in $(seq 1 "$number_of_nodes"); do
+  name="amoc-arsenal-$i"
+  ./ci/wait_for_healthcheck.sh "$name"
+done
 
-docker exec -t amoc-arsenal-1 ${PATH_TO_EXEC} eval "nodes()" | grep amoc-arsenal-2
-docker exec -t amoc-arsenal-2 ${PATH_TO_EXEC} eval "nodes()" | grep amoc-arsenal-1
-
-
+for i in $(seq 1 "$number_of_nodes"); do
+  name="amoc-arsenal-$i"
+  output="$(docker exec -t "$name" "$path_to_exec" eval "nodes()")"
+  echo  "container == '${name}', nodes() == ${output}"
+  for j in $(seq 1 "$number_of_nodes"); do
+    if [ "$j" -ne "$i" ]; then
+      node_name="amoc_arsenal_xmpp@amoc-arsenal-$j"
+      echo "$output" | grep -q "$node_name"
+    fi
+  done
+done
