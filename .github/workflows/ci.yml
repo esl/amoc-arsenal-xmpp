@@ -26,7 +26,7 @@
          run: ./rebar3 compile
        - name: run xref check
          run: ./rebar3 xref
-       - name: run dializer check
+       - name: run dialyzer check
          run: ./rebar3 dialyzer
 
    integration_test:
