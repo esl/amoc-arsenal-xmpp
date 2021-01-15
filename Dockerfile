@@ -16,7 +16,7 @@ RUN apt-get update
 ARG otp_vsn=1:22.3-1
 RUN apt-get install -y esl-erlang=${otp_vsn}
 
-RUN  apt-get install -y git g++
+RUN  apt-get install -y git g++ openssl libssl-dev
 
 COPY . /amoc_arsenal_build
 WORKDIR /amoc_arsenal_build
