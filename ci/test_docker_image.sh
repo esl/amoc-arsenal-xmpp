@@ -27,7 +27,7 @@ done
 
 for i in $(seq 1 "$number_of_nodes"); do
   name="amoc-arsenal-$i"
-  output="$(docker exec -t "$name" "$path_to_exec" eval "nodes()")"
+  output="$(docker exec -t "$name" "$path_to_exec" eval "nodes().")"
   echo  "container == '${name}', nodes() == ${output}"
   for j in $(seq 1 "$number_of_nodes"); do
     if [ "$j" -ne "$i" ]; then
