@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](http://semver.org/)
 ### Changed:
 - Migrated to OTP24
 - Updated dependencies
+- Updated AMOC REST API
 
 ## [1.0.0](https://github.com/esl/amoc/compare/1.0.0-beta...1.0.0) - 2019-12-05
 
