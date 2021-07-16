@@ -1,29 +1,28 @@
-
-FROM phusion/baseimage:bionic-1.0.0 as base
-
-FROM base AS builder
+FROM phusion/baseimage:focal-1.0.0 as builder
 
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update
-RUN apt-get install -y gnupg2
+RUN apt-get update && \
+    apt-get install -y git g++ make openssl libssl-dev gnupg2 wget
 
-ADD https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb /tmp/
-RUN dpkg -i /tmp/erlang-solutions_2.0_all.deb
-RUN apt-get update
+ARG otp_vsn=24.0-1
 
-## to get the list of all available versions for your distro run:
-##     apt-cache policy esl-erlang
-ARG otp_vsn=1:22.3-1
-RUN apt-get install -y esl-erlang=${otp_vsn}
+RUN wget https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb && \
+    dpkg -i erlang-solutions_2.0_all.deb && \
+    apt-get update && \
+    apt-get install -y esl-erlang=1:${otp_vsn}
 
-RUN  apt-get install -y git g++ openssl libssl-dev
+ARG REBAR3_VERSION="3.16.1"
+RUN set -xe \
+    && REBAR3_DOWNLOAD_URL="https://github.com/erlang/rebar3/releases/download/${REBAR3_VERSION}/rebar3" \
+    && curl -fSL -o rebar3 "$REBAR3_DOWNLOAD_URL" \
+    && install -v ./rebar3 /usr/local/bin/
 
 COPY . /amoc_arsenal_build
 WORKDIR /amoc_arsenal_build
 RUN git clean -ffxd
-RUN ./rebar3 release
+RUN rebar3 release
 
-FROM base
+FROM builder
 MAINTAINER Erlang Solutions <mongoose-im@erlang-solutions.com>
 
 RUN useradd -ms /bin/bash amoc
