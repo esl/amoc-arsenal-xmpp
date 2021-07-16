@@ -13,27 +13,28 @@
      name: OTP ${{matrix.otp}}
      strategy:
        matrix:
-         otp: ['22.3', '21.3']
+         otp: ['24.0', '23.3.1']
      runs-on: 'ubuntu-20.04'
      steps:
        - uses: actions/checkout@v2
          with:
            fetch-depth: 0
-       - uses: ErlGang/setup-erlang@v1.0.0
+       - uses: erlef/setup-beam@v1
          with:
            otp-version: ${{ matrix.otp }}
+           rebar3-version: '3.16.1'
        - name: Compile project
-         run: ./rebar3 compile
+         run: rebar3 compile
        - name: run xref check
-         run: ./rebar3 xref
+         run: rebar3 xref
        - name: run dialyzer check
-         run: ./rebar3 dialyzer
+         run: rebar3 dialyzer
 
    integration_test:
      name: docker container test with OTP ${{matrix.otp}}
      strategy:
        matrix:
-         otp: ['22.3', '21.3']
+         otp: ['24.0', '23.3.1']
      runs-on: 'ubuntu-20.04'
      env:
        OTP_RELEASE: ${{ matrix.otp }}
