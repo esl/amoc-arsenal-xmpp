@@ -1,7 +1,7 @@
 {"1.2.0",
 [{<<"amoc">>,
   {git,"https://github.com/esl/amoc",
-       {ref,"44fc97e34b9911c012945dfe041104f32e16ed06"}},
+       {ref,"84ad5ea8ec05bbf38475e2c639812609cee4b81c"}},
   0},
  {<<"amoc_rest">>,
   {git,"https://github.com/esl/amoc_rest.git",
