@@ -4,6 +4,7 @@
 -export([connect_or_exit/2]).
 -export([pick_server/1]).
 -export([send_request_and_get_response/5]).
+-export([bucket_neighbours/2]).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -99,3 +100,10 @@ send_request_and_get_response(Client, Req, Pred, TimeMetric, Timeout) ->
             amoc_metrics:update_time(TimeMetric, RecvTimestamp - SendTimestamp),
             Stanza
     end.
+
+%% Divide users into buckets of BucketSize and return all users from the bucket except Id
+-spec bucket_neighbours(amoc_scenario:user_id(), pos_integer()) -> [amoc_scenario:user_id()].
+bucket_neighbours(Id, BucketSize) ->
+    PositionInBucket = (Id - 1) rem BucketSize,
+    BucketStartId = Id - PositionInBucket,
+    lists:delete(Id, lists:seq(BucketStartId, BucketStartId + BucketSize - 1)).
