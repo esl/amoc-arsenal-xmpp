@@ -74,13 +74,13 @@ make_user(Id, Props) ->
 
 -spec default_user_spec(binary(), binary()) -> escalus_users:user_spec().
 default_user_spec(ProfileId, Password) ->
-    [ {username, ProfileId},
-      {server, <<"localhost">>},
-      {host, <<"127.0.0.1">>},
-      {password, Password},
-      {carbons, false},
-      {stream_management, false},
-      {resource, base64:encode(crypto:strong_rand_bytes(5))}].
+    [{username, ProfileId},
+     {server, <<"localhost">>},
+     {password, Password},
+     {carbons, false},
+     {stream_management, false},
+     {resource, base64:encode(crypto:strong_rand_bytes(5))}] ++
+        pick_server([[{host, "127.0.0.1"}]]).
 
 -spec send_request_and_get_response(
         escalus:client(), exml:element(), escalus_connection:stanza_pred(), amoc_metrics:name(), timeout()
