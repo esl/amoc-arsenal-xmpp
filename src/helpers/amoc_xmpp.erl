@@ -3,6 +3,7 @@
 -export([connect_or_exit/1]).
 -export([connect_or_exit/2]).
 -export([pick_server/1]).
+-export([make_user/2]).
 -export([send_request_and_get_response/5]).
 -export([bucket_neighbours/2]).
 
