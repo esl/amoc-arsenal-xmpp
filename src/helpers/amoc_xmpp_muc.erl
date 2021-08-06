@@ -2,16 +2,28 @@
 
 %% API
 
--export([rooms_to_join/3,
-         rooms_to_create/3,
-         room_members/2]).
+-export([rooms_to_join/1, rooms_to_join/3,
+         rooms_to_create/1, rooms_to_create/3,
+         room_members/1, room_members/2]).
 
 %% Debug API
 
 -export([print_rooms_to_join/3,
          print_rooms_to_create/3]).
 
+-define(V(X), (fun amoc_config_validation:X/1)).
+
+-required_variable(
+   [#{name => rooms_per_user, default_value => 10, verification => ?V(nonnegative_integer),
+      description => "Number of rooms each user belongs to"},
+    #{name => users_per_room, default_value => 5, verification => ?V(nonnegative_integer),
+      description => "Number of users each room has"}
+   ]).
+
 %% Room distribution by buckets
+
+rooms_to_join(UserId) ->
+    rooms_to_join(UserId, cfg(rooms_per_user), cfg(users_per_room)).
 
 %% @doc Returns the IDs of rooms joined by the specified user, intended for MUC.
 %% The order is important for equal distribution of created rooms
@@ -23,11 +35,17 @@ rooms_to_join(UserId, RoomsPerUser, UsersPerRoom) ->
     lists:seq(BasicRoom + 1, RoomBucketStartId + RoomsPerUser - 1)
         ++ lists:seq(RoomBucketStartId, BasicRoom).
 
+rooms_to_create(UserId) ->
+    rooms_to_create(UserId, cfg(rooms_per_user), cfg(users_per_room)).
+
 %% @doc Returns the IDs of rooms created by the specified user, intended for MUC Light.
 -spec rooms_to_create(amoc_scenario:user_id(), pos_integer(), pos_integer()) -> [pos_integer()].
 rooms_to_create(UserId, RoomsPerUser, UsersPerRoom) ->
     MyRooms = rooms_to_join(UserId, RoomsPerUser, UsersPerRoom),
     lists:filter(fun(R) -> creator(R, RoomsPerUser, UsersPerRoom) =:= UserId end, MyRooms).
+
+room_members(CreatorId) ->
+    room_members(CreatorId, cfg(users_per_room)).
 
 %% @doc Returns the list of member IDs for any room created by the specified user,
 %% intended for MUC Light.
@@ -129,3 +147,5 @@ room_to_create_char(UserId, _, Members) ->
         true -> $.;
         false -> ($ )
     end.
+
+cfg(Name) -> amoc_config:get(Name).
