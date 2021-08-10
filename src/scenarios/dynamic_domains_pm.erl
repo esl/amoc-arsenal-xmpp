@@ -5,7 +5,7 @@
 -define(V(X), (fun amoc_config_validation:X/1)).
 
 -required_variable(
-   [#{name => message_count, default_value => 60, verification => ?V(positive_integer),
+   [#{name => message_count, default_value => 60, verification => ?V(nonnegative_integer),
       description => "Number of messages sent by each user"},
     #{name => message_interval, default_value => 10, verification => ?V(nonnegative_integer),
       description => "Interval (in seconds) between messages"}
