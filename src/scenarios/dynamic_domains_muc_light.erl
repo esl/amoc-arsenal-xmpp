@@ -6,7 +6,7 @@
 -define(V(X), (fun amoc_config_validation:X/1)).
 
 -required_variable(
-   [#{name => messages_sent_per_room, default_value => 180, verification => ?V(nonnegative_integer),
+   [#{name => messages_sent_per_room, default_value => 60, verification => ?V(nonnegative_integer),
       description => "Number of messages sent per room"},
     #{name => room_creation_interval, default_value => 20, verification => ?V(nonnegative_integer),
       description => "Delay between creating consecutive rooms (in seconds)"},
