@@ -71,7 +71,7 @@ is_mam_archived_message(#xmlel{name = <<"message">>} = Stanza, Type) ->
                                  {element, <<"forwarded">>},
                                  {element, <<"message">>}]),
     BinType = atom_to_binary(Type),
-    escalus_pred:is_message(M) andalso escalus_pred:has_type(BinType, Stanza);
+    escalus_pred:is_message(M) andalso escalus_pred:has_type(BinType, M);
 is_mam_archived_message(_Stanza, _Type) ->
     false.
 

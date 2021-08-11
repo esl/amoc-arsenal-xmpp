@@ -1,12 +1,11 @@
 -module(dynamic_domains_mam_lookup).
 
 -include_lib("kernel/include/logger.hrl").
--include_lib("exml/include/exml.hrl").
 
 -define(V(X), (fun amoc_config_validation:X/1)).
 
 -required_variable(
-   [#{name => lookup_count, default_value => 20, verification => ?V(positive_integer),
+   [#{name => lookup_count, default_value => 60, verification => ?V(positive_integer),
       description => "Number of lookups performed by each user"},
     #{name => lookup_interval, default_value => 10, verification => ?V(nonnegative_integer),
       description => "Interval (in seconds) between lookups"}
@@ -20,10 +19,7 @@
 init() ->
     ?LOG_INFO("init metrics"),
     amoc_xmpp_presence:init(),
-    amoc_metrics:init(counters, mam_messages_received),
-    amoc_metrics:init(counters, mam_lookups),
-    amoc_metrics:init(counters, timeouts),
-    amoc_metrics:init(times, mam_lookup_response_time),
+    amoc_xmpp_mam:init(),
     ok.
 
 %% User helpers
@@ -44,33 +40,8 @@ do(_MyId, Client) ->
     timetable:do(Client, fun send_stanza/3, TimeTable, #state{}).
 
 send_stanza(Client, mam_lookup, State = #state{last_mam_id = Id}) ->
-    NewId = get_mam_messages(Client, Id),
+    NewId = amoc_xmpp_mam:get_mam_messages(Client, #{last_id => Id}),
     State#state{last_mam_id = NewId}.
-
-%% MAM requests
-
-get_mam_messages(Client, LastId) ->
-    SetChild = #xmlel{name = <<"set">>,
-                      attrs = [{<<"xmlns">>, <<"http://jabber.org/protocol/rsm">>}],
-                      children = [#xmlel{name = <<"max">>,
-                                         children = [#xmlcdata{content = <<"5">>}]}
-                                 | after_elements(LastId)]},
-    Req = escalus_stanza:iq(<<"set">>,
-                            [#xmlel{name = <<"query">>,
-                                    attrs = [{<<"xmlns">>,  <<"urn:xmpp:mam:2">>}],
-                                    children = [SetChild]}]),
-    Pred = fun(Stanza) -> escalus_pred:is_iq_result(Req, Stanza) end,
-    Metric = mam_lookup_response_time,
-    Timeout = timer:seconds(10),
-    amoc_metrics:update_counter(mam_lookups),
-    Response = amoc_xmpp:send_request_and_get_response(Client, Req, Pred, Metric, Timeout),
-    get_last_id(Response).
-
-after_elements(none) -> [];
-after_elements(Last) -> [#xmlel{name = <<"after">>, children = [#xmlcdata{content = Last}]}].
-
-get_last_id(Stanza) ->
-    exml_query:paths(Stanza, [{element, <<"fin">>}, {element, <<"set">>}, {element, <<"last">>}, cdata]).
 
 %% Stanza handlers
 
@@ -78,9 +49,7 @@ sent_handler_spec() ->
     amoc_xmpp_presence:sent_handler_spec().
 
 received_handler_spec() ->
-    [{fun(Stanza) -> escalus_pred:is_mam_archived_message(<<"hello">>, Stanza) end,
-      fun() -> amoc_metrics:update_counter(mam_messages_received) end} |
-     amoc_xmpp_presence:received_handler_spec()].
+    amoc_xmpp_mam:received_handler_spec(chat) ++ amoc_xmpp_presence:received_handler_spec().
 
 %% Config helpers
 
