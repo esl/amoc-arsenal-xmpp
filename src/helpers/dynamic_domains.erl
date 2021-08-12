@@ -1,6 +1,7 @@
 -module(dynamic_domains).
 
--export([connect_or_exit/2,
+-export([init/0,
+         connect_or_exit/2,
          domain_name/1,
          domain_id/1]).
 
@@ -21,6 +22,10 @@
       description => "Time to wait until the domain is created by the first user (in seconds)"}
    ]).
 
+init() ->
+    amoc_metrics:init(counters, domain_creation_requests),
+    amoc_metrics:init(times, domain_creation_time).
+
 connect_or_exit(Id, ExtraSpec) ->
     Spec = amoc_xmpp:make_user(Id, [{server, dynamic_domains:domain_name(Id)} | ExtraSpec]),
     maybe_create_domain(Id, Spec),
@@ -31,7 +36,9 @@ maybe_create_domain(UserId, UserSpec) ->
         true ->
             Host = proplists:get_value(host, UserSpec),
             Domain = proplists:get_value(server, UserSpec),
-            create_domain(Host, Domain);
+            amoc_metrics:update_counter(domain_creation_requests),
+            {Time, _} = timer:tc(fun create_domain/2, [Host, Domain]),
+            amoc_metrics:update_time(domain_creation_time, Time);
         false ->
             not_needed
     end,

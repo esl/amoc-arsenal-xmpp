@@ -18,6 +18,7 @@
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init metrics"),
+    dynamic_domains:init(),
     amoc_xmpp_presence:init(),
     amoc_xmpp_mam:init(),
     ok.
