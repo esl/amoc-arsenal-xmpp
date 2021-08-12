@@ -28,7 +28,7 @@ init() ->
 -spec start(amoc_scenario:user_id()) -> any().
 start(MyId) ->
     Spec = amoc_xmpp_handlers:make_props(received_handler_spec(), sent_handler_spec()),
-    {ok, Client, _} = dynamic_domains:connect_or_exit(MyId, Spec),
+    {ok, Client, _} = dynamic_domains:connect_or_exit(MyId, Spec, #{create_domain => false}),
     amoc_xmpp_presence:start(Client),
     do(MyId, Client),
     amoc_xmpp_presence:stop(Client).

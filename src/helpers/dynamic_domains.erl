@@ -2,6 +2,7 @@
 
 -export([init/0,
          connect_or_exit/2,
+         connect_or_exit/3,
          domain_name/1,
          domain_id/1]).
 
@@ -27,12 +28,15 @@ init() ->
     amoc_metrics:init(times, domain_creation_time).
 
 connect_or_exit(Id, ExtraSpec) ->
+    connect_or_exit(Id, ExtraSpec, #{}).
+
+connect_or_exit(Id, ExtraSpec, Opts) ->
     Spec = amoc_xmpp:make_user(Id, [{server, dynamic_domains:domain_name(Id)} | ExtraSpec]),
-    maybe_create_domain(Id, Spec),
+    maybe_create_domain(Id, Spec, Opts),
     amoc_xmpp:connect_or_exit(Spec).
 
-maybe_create_domain(UserId, UserSpec) ->
-    case is_first_user_in_domain(UserId) of
+maybe_create_domain(UserId, UserSpec, Opts) ->
+    case should_create_domain(UserId, Opts) of
         true ->
             Host = proplists:get_value(host, UserSpec),
             Domain = proplists:get_value(server, UserSpec),
@@ -43,6 +47,9 @@ maybe_create_domain(UserId, UserSpec) ->
             not_needed
     end,
     timer:sleep(cfg(wait_time_for_domain_creation)).
+
+should_create_domain(_UserId, #{create_domain := Value}) -> Value;
+should_create_domain(UserId, #{}) -> is_first_user_in_domain(UserId).
 
 is_first_user_in_domain(UserId) ->
     BucketSize = cfg(domain_bucket_size),
