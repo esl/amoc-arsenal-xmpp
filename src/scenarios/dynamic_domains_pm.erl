@@ -33,7 +33,7 @@ start(MyId) ->
     do(MyId, Client),
     amoc_xmpp_presence:stop(Client).
 
--record(state, {neighbours}).
+-record(state, {neighbours :: [amoc_scenario:user_id()]}).
 
 -spec do(amoc_scenario:user_id(), escalus:client()) -> any().
 do(MyId, Client) ->
@@ -43,6 +43,7 @@ do(MyId, Client) ->
 
 %% One-to-one messages
 
+-spec send_stanza(escalus:client(), chat, #state{}) -> #state{}.
 send_stanza(Client, chat, State = #state{neighbours = [RecipientId | Rest]}) ->
     Msg = escalus_stanza:chat_to_with_id_and_timestamp(make_jid(RecipientId), <<"hello">>),
     escalus_connection:send(Client, Msg),

@@ -4,9 +4,9 @@
 -include_lib("exml/include/exml.hrl").
 
 %% Handler construction
+-export([make_props/2]).
 -export([stanza_handlers/1]).
 -export([stanza_handler/2]).
--export([make_props/2]).
 
 %% Actions
 -export([measure_ttd/3]).
@@ -16,6 +16,8 @@
 -export([ttd/2]).
 
 %% Types
+-type handler_spec() :: {escalus_connection:stanza_pred(), action()}.
+
 -type action() :: fun((escalus_connection:client(),
                        exml_stream:element(),
                        escalus_connection:metadata()) -> any())
@@ -23,15 +25,20 @@
                        exml_stream:element()) -> any())
                 | fun(() -> any()).
 
-%% Handler construction
+-export_type([handler_spec/0, action/0]).
 
+%% @doc Make a proplist with the received and sent stanza handlers.
+%% A catch-all handler is added to the received stanza handlers
+%% to avoid silently skipping unexpected stanzas, e.g. errors.
+-spec make_props([handler_spec()], [handler_spec()]) -> escalus_users:user_spec().
 make_props(RecvSpec, SentSpec) ->
     RecvSpecWithGuard = RecvSpec ++ [{fun match_all/1, fun warn_about_skipped_stanza/2}],
     [{received_stanza_handlers, stanza_handlers(RecvSpecWithGuard)},
      {sent_stanza_handlers, stanza_handlers(SentSpec)}].
 
--spec stanza_handlers([{escalus_connection:stanza_pred(), action()}]) ->
-                             [escalus_connection:stanza_handler()].
+%% Handler construction
+
+-spec stanza_handlers([handler_spec()]) -> [escalus_connection:stanza_handler()].
 stanza_handlers(Spec) ->
     lists:map(fun stanza_handler/1, Spec).
 
@@ -73,6 +80,7 @@ measure_ttd(_Client, Stanza, Metadata) ->
         _ -> ok
     end.
 
+-spec warn_about_skipped_stanza(escalus_connection:client(), exml_stream:element()) -> any().
 warn_about_skipped_stanza(_Client, Stanza) ->
     ?LOG_WARNING("Skipping received stanza ~p", [Stanza]).
 

@@ -20,6 +20,8 @@
 
 -export([init/0, start/1]).
 
+-type groupchat_event() :: {groupchat, RoomJid :: binary()}.
+
 -spec init() -> ok.
 init() ->
     ?LOG_INFO("init metrics"),
@@ -49,6 +51,7 @@ do(MyId, Client) ->
     escalus_connection:wait(Client, cfg(delay_before_sending_messages)),
     send_messages(Client, MyId, MyRooms).
 
+-spec create_rooms(escalus:client(), amoc_scenario:user_id(), [pos_integer()]) -> [].
 create_rooms(Client, MyId, MyRooms) ->
     TimeTable = timetable:new(create_room, length(MyRooms), cfg(room_creation_interval)),
     timetable:do(Client, fun(_, create_room, [RoomId | Rest]) ->
@@ -56,13 +59,18 @@ create_rooms(Client, MyId, MyRooms) ->
                                  Rest
                          end, TimeTable, MyRooms).
 
+-spec send_messages(escalus:client(), amoc_scenario:user_id(), [pos_integer()]) -> ok.
 send_messages(Client, MyId, MyRooms) ->
     TimeTable = message_timetable(MyId, MyRooms),
     timetable:do(Client, fun send_stanza/2, TimeTable).
 
+-spec message_timetable(amoc_scenario:user_id(), [pos_integer()]) ->
+          timetable:timetable(groupchat_event()).
 message_timetable(MyId, RoomIdsToSend) ->
     timetable:merge([room_message_timetable(MyId, RoomId) || RoomId <- RoomIdsToSend]).
 
+-spec room_message_timetable(amoc_scenario:user_id(), pos_integer()) ->
+          timetable:timetable(groupchat_event()).
 room_message_timetable(MyId, RoomId) ->
     RoomJid = room_jid(RoomId, dynamic_domains:domain_name(MyId)),
     timetable:new({groupchat, RoomJid},
@@ -70,36 +78,16 @@ room_message_timetable(MyId, RoomId) ->
 
 %% Room creation
 
+-spec create_room(escalus:client(), amoc_scenario:user_id(), pos_integer()) -> ok.
 create_room(Client, MyId, RoomId) ->
+    RoomJid = room_jid(RoomId, dynamic_domains:domain_name(MyId)),
     MemberIds = amoc_xmpp_muc:room_members(MyId),
     MemberJids = [make_jid(MemberId) || MemberId <- MemberIds],
-    RoomJid = room_jid(RoomId, dynamic_domains:domain_name(MyId)),
-    Req = stanza_create_room(room_name(RoomId), RoomJid, MemberJids),
-    Pred = fun(Stanza) -> escalus_pred:is_iq_result(Req, Stanza) end,
-    TimeMetric = room_creation_response_time,
-    amoc_xmpp:send_request_and_get_response(Client, Req, Pred, TimeMetric, 10000),
-    %% TODO check response
-    amoc_metrics:update_counter(muc_rooms_created).
-
-stanza_create_room(RoomName, RoomJid, MemberJids) ->
-    ConfigFields = [kv_el(<<"roomname">>, RoomName)],
-    ConfigElement = #xmlel{name = <<"configuration">>, children = ConfigFields},
-    UserFields = [user_element(Jid, <<"member">>) || Jid <- MemberJids],
-    OccupantsElement = #xmlel{name = <<"occupants">>, children = UserFields},
-    escalus_stanza:to(escalus_stanza:iq_set(ns(muc_light_create), [ConfigElement, OccupantsElement]),
-                      RoomJid).
-
-user_element(Jid, Aff) ->
-    #xmlel{name = <<"user">>,
-           attrs = [{<<"affiliation">>, Aff}],
-           children = [#xmlcdata{content = Jid}]}.
-
-kv_el(K, V) ->
-    #xmlel{name = K,
-           children = [#xmlcdata{content = V}]}.
+    amoc_xmpp_muc:create_muc_light_room(Client, room_name(RoomId), RoomJid, MemberJids).
 
 %% Groupchat messages
 
+-spec send_stanza(escalus:client(), groupchat_event()) -> ok.
 send_stanza(Client, {groupchat, RoomJid}) ->
     escalus_connection:send(Client, message_to_room(RoomJid)).
 
@@ -116,7 +104,6 @@ room_name(RoomId) ->
 muc_host(Domain) ->
     <<"muclight.", Domain/binary>>.
 
-ns(muc_light_create) -> <<"urn:xmpp:muclight:0#create">>;
 ns(muc_light_affiliations) -> <<"urn:xmpp:muclight:0#affiliations">>;
 ns(muc_light_configuration) -> <<"urn:xmpp:muclight:0#configuration">>.
 

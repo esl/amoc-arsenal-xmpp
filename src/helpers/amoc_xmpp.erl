@@ -102,7 +102,9 @@ send_request_and_get_response(Client, Req, Pred, TimeMetric, Timeout) ->
             Stanza
     end.
 
-%% Divide users into buckets of BucketSize and return all users from the bucket except Id
+%% @doc Divide users into buckets of BucketSize and return all users from the bucket except Id.
+%% When the total user number is divisible by BucketSize, it makes the total number of messages
+%% easy to predict and check.
 -spec bucket_neighbours(amoc_scenario:user_id(), pos_integer()) -> [amoc_scenario:user_id()].
 bucket_neighbours(Id, BucketSize) ->
     PositionInBucket = (Id - 1) rem BucketSize,

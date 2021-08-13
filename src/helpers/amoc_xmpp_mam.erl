@@ -11,7 +11,12 @@
       description => "Timeout for each MAM lookup request (in seconds)"}
    ]).
 
--export([init/0, get_mam_messages/2, received_handler_spec/1]).
+-export([init/0, lookup/2, received_handler_spec/1]).
+
+-type last_id() :: none | binary().
+-type lookup_opts() :: #{last_id => last_id(), jid => binary()}.
+
+-export_type([last_id/0, lookup_opts/0]).
 
 -spec init() -> ok.
 init() ->
@@ -22,7 +27,8 @@ init() ->
     amoc_metrics:init(times, mam_lookup_response_time),
     ok.
 
-get_mam_messages(Client, Opts) ->
+-spec lookup(escalus:client(), lookup_opts()) -> last_id().
+lookup(Client, Opts) ->
     Req = mam_request(Opts),
     Pred = fun(Stanza) -> escalus_pred:is_iq_result(Req, Stanza) end,
     Metric = mam_lookup_response_time,
@@ -31,6 +37,7 @@ get_mam_messages(Client, Opts) ->
     Response = amoc_xmpp:send_request_and_get_response(Client, Req, Pred, Metric, Timeout),
     get_last_id(Response).
 
+-spec mam_request(lookup_opts()) -> exml:element().
 mam_request(Opts) ->
     Max = cfg(max_items_per_lookup),
     SetChild = #xmlel{name = <<"set">>,
@@ -47,11 +54,13 @@ mam_request(Opts) ->
         #{} -> Req
     end.
 
+-spec after_elements(lookup_opts()) -> [exml:element()].
 after_elements(#{last_id := LastId}) when LastId =/= none ->
     [#xmlel{name = <<"after">>, children = [#xmlcdata{content = LastId}]}];
 after_elements(#{}) -> [].
 
 %% Wrap around if the next result set would be incomplete
+-spec get_last_id(exml:element()) -> last_id().
 get_last_id(Stanza) ->
     [SetEl] = exml_query:paths(Stanza, [{element, <<"fin">>}, {element, <<"set">>}]),
     [FirstIndex] = exml_query:paths(SetEl, [{element, <<"first">>}, {attr, <<"index">>}]),
@@ -62,10 +71,13 @@ get_last_id(Stanza) ->
         false -> none
     end.
 
+-spec received_handler_spec(chat | groupchat) -> [amoc_xmpp_handlers:handler_spec()].
 received_handler_spec(Type) ->
     [{fun(M) -> is_mam_archived_message(M, Type) end,
       fun() -> amoc_metrics:update_counter(mam_messages_received) end}].
 
+%% TODO rework escalus_pred to include these checks
+-spec is_mam_archived_message(exml:element(), chat | groupchat) -> boolean().
 is_mam_archived_message(#xmlel{name = <<"message">>} = Stanza, Type) ->
     M = exml_query:path(Stanza, [{element, <<"result">>},
                                  {element, <<"forwarded">>},

@@ -33,15 +33,16 @@ start(MyId) ->
     do(MyId, Client),
     amoc_xmpp_presence:stop(Client).
 
--record(state, {last_mam_id = none}).
+-record(state, {last_mam_id = none :: amoc_xmpp_mam:last_id()}).
 
 -spec do(amoc_scenario:user_id(), escalus:client()) -> any().
 do(_MyId, Client) ->
     TimeTable = timetable:new(mam_lookup, cfg(lookup_count), cfg(lookup_interval)),
     timetable:do(Client, fun send_stanza/3, TimeTable, #state{}).
 
+-spec send_stanza(escalus:client(), mam_lookup, #state{}) -> #state{}.
 send_stanza(Client, mam_lookup, State = #state{last_mam_id = Id}) ->
-    NewId = amoc_xmpp_mam:get_mam_messages(Client, #{last_id => Id}),
+    NewId = amoc_xmpp_mam:lookup(Client, #{last_id => Id}),
     State#state{last_mam_id = NewId}.
 
 %% Stanza handlers

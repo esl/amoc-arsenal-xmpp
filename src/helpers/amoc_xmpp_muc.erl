@@ -1,8 +1,12 @@
 -module(amoc_xmpp_muc).
 
+-include_lib("exml/include/exml.hrl").
+
 %% API
 
--export([rooms_to_join/1, rooms_to_join/3,
+-export([init/0,
+         create_muc_light_room/4,
+         rooms_to_join/1, rooms_to_join/3,
          rooms_to_create/1, rooms_to_create/3,
          room_members/1, room_members/2]).
 
@@ -20,8 +24,45 @@
       description => "Number of users each room has"}
    ]).
 
+-spec init() -> ok.
+init() ->
+    amoc_metrics:init(counters, muc_rooms_created),
+    amoc_metrics:init(times, room_creation_response_time).
+
+%% Room creation
+
+-spec create_muc_light_room(escalus:client(), binary(), binary(), [binary()]) -> ok.
+create_muc_light_room(Client, RoomName, RoomJid, MemberJids) ->
+    Req = stanza_create_room(RoomName, RoomJid, MemberJids),
+    Pred = fun(Stanza) -> escalus_pred:is_iq_result(Req, Stanza) end,
+    TimeMetric = room_creation_response_time,
+    amoc_xmpp:send_request_and_get_response(Client, Req, Pred, TimeMetric, 10000),
+    %% TODO check response
+    amoc_metrics:update_counter(muc_rooms_created).
+
+-spec stanza_create_room(binary(), binary(), [binary()]) -> exml:element().
+stanza_create_room(RoomName, RoomJid, MemberJids) ->
+    ConfigFields = [kv_el(<<"roomname">>, RoomName)],
+    ConfigElement = #xmlel{name = <<"configuration">>, children = ConfigFields},
+    UserFields = [user_element(Jid, <<"member">>) || Jid <- MemberJids],
+    OccupantsElement = #xmlel{name = <<"occupants">>, children = UserFields},
+    escalus_stanza:to(escalus_stanza:iq_set(ns(muc_light_create), [ConfigElement, OccupantsElement]),
+                      RoomJid).
+
+user_element(Jid, Aff) ->
+    #xmlel{name = <<"user">>,
+           attrs = [{<<"affiliation">>, Aff}],
+           children = [#xmlcdata{content = Jid}]}.
+
+kv_el(K, V) ->
+    #xmlel{name = K,
+           children = [#xmlcdata{content = V}]}.
+
+ns(muc_light_create) -> <<"urn:xmpp:muclight:0#create">>.
+
 %% Room distribution by buckets
 
+-spec rooms_to_join(amoc_scenario:user_id()) -> [pos_integer()].
 rooms_to_join(UserId) ->
     rooms_to_join(UserId, cfg(rooms_per_user), cfg(users_per_room)).
 
@@ -35,6 +76,7 @@ rooms_to_join(UserId, RoomsPerUser, UsersPerRoom) ->
     lists:seq(BasicRoom + 1, RoomBucketStartId + RoomsPerUser - 1)
         ++ lists:seq(RoomBucketStartId, BasicRoom).
 
+-spec rooms_to_create(amoc_scenario:user_id()) -> [pos_integer()].
 rooms_to_create(UserId) ->
     rooms_to_create(UserId, cfg(rooms_per_user), cfg(users_per_room)).
 
@@ -44,6 +86,7 @@ rooms_to_create(UserId, RoomsPerUser, UsersPerRoom) ->
     MyRooms = rooms_to_join(UserId, RoomsPerUser, UsersPerRoom),
     lists:filter(fun(R) -> creator(R, RoomsPerUser, UsersPerRoom) =:= UserId end, MyRooms).
 
+-spec room_members(amoc_scenario:user_id()) -> [amoc_scenario:user_id()].
 room_members(CreatorId) ->
     room_members(CreatorId, cfg(users_per_room)).
 
@@ -149,3 +192,4 @@ room_to_create_char(UserId, _, Members) ->
     end.
 
 cfg(Name) -> amoc_config:get(Name).
+
