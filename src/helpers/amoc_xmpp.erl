@@ -3,7 +3,9 @@
 -export([connect_or_exit/1]).
 -export([connect_or_exit/2]).
 -export([pick_server/1]).
+-export([make_user/2]).
 -export([send_request_and_get_response/5]).
+-export([bucket_neighbours/2]).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -74,13 +76,13 @@ make_user(Id, Props) ->
 
 -spec default_user_spec(binary(), binary()) -> escalus_users:user_spec().
 default_user_spec(ProfileId, Password) ->
-    [ {username, ProfileId},
-      {server, <<"localhost">>},
-      {host, <<"127.0.0.1">>},
-      {password, Password},
-      {carbons, false},
-      {stream_management, false},
-      {resource, base64:encode(crypto:strong_rand_bytes(5))}].
+    [{username, ProfileId},
+     {server, <<"localhost">>},
+     {password, Password},
+     {carbons, false},
+     {stream_management, false},
+     {resource, base64:encode(crypto:strong_rand_bytes(5))}] ++
+        pick_server([[{host, "127.0.0.1"}]]).
 
 -spec send_request_and_get_response(
         escalus:client(), exml:element(), escalus_connection:stanza_pred(), amoc_metrics:name(), timeout()
@@ -99,3 +101,12 @@ send_request_and_get_response(Client, Req, Pred, TimeMetric, Timeout) ->
             amoc_metrics:update_time(TimeMetric, RecvTimestamp - SendTimestamp),
             Stanza
     end.
+
+%% @doc Divide users into buckets of BucketSize and return all users from the bucket except Id.
+%% When the total user number is divisible by BucketSize, it makes the total number of messages
+%% easy to predict and check.
+-spec bucket_neighbours(amoc_scenario:user_id(), pos_integer()) -> [amoc_scenario:user_id()].
+bucket_neighbours(Id, BucketSize) ->
+    PositionInBucket = (Id - 1) rem BucketSize,
+    BucketStartId = Id - PositionInBucket,
+    lists:delete(Id, lists:seq(BucketStartId, BucketStartId + BucketSize - 1)).
