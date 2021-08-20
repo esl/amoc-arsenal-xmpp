@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  amoc-master:
+    hostname: "amoc-master"
+    image: "amoc-arsenal-xmpp"
+    ports:
+      - "4000:4000"
+    networks:
+      - amoc-test-network
+    environment:
+      AMOC_GRAPHITE_HOST: '"graphite"'
+  amoc-worker-1:
+    hostname: "amoc-worker-1"
+    image: "amoc-arsenal-xmpp"
+    networks:
+      - amoc-test-network
+    environment:
+      AMOC_GRAPHITE_HOST: '"graphite"'
+      AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
+      AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
+  amoc-worker-2:
+    hostname: "amoc-worker-2"
+    image: "amoc-arsenal-xmpp"
+    networks:
+      - amoc-test-network
+    environment:
+      AMOC_GRAPHITE_HOST: '"graphite"'
+      AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
+      AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
+  graphite:
+    image: "graphiteapp/graphite-statsd:1.1.7-2"
+    ports:
+      - "2003:2003"
+      - "8080:80"
+    networks:
+      - amoc-test-network
+  grafana:
+    image: "grafana/grafana:6.7.3"
+    ports:
+      - "3000:3000"
+    networks:
+      - amoc-test-network
+networks:
+  amoc-test-network:
