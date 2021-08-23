@@ -1,3 +1,10 @@
+%% @doc Each user performs the following steps:
+%%   - Create the domain dynamically when needed (there is one creator for each domain)
+%%   - Log in to the dynamically created domain (see dynamic_domains.erl)
+%%   - Send presence: available (see amoc_xmpp_presence.erl)
+%%   - Send chat messages to neighbours periodically (users are divided into buckets of neighbours)
+%%   - Send presence: unavailable and disconnect
+
 -module(dynamic_domains_pm).
 
 -include_lib("kernel/include/logger.hrl").

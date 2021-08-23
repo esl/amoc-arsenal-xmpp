@@ -1,18 +1,17 @@
 %% @doc Each user performs the following steps:
 %%   - Log in to a dynamically created domain (see dynamic_domains.erl)
 %%   - Send presence: available (see amoc_xmpp_presence.erl)
-%%   - Send requests for MAM periodically, paging through results.
-%%     When the next page would be incomplete, start again from the beginning.
-%%     (see the config variables for this module and for amoc_xmpp_mam.erl)
+%%   - Send requests for Inbox periodically
+%%     (see the config variables for this module and for 'amoc_xmpp_inbox')
 %%   - Send presence: unavailable and disconnect
 %%
 %% Prerequisites:
 %%   - Dynamic domains already created
-%%   - For non-empty MAM results: messages in the MAM archive
-%% You can generate both by running the 'dynamic_domains_pm' scenario before this one
-%% for at least as many users.
+%%   - For non-empty inbox results: messages in Inbox
+%% You can generate both by running either the 'dynamic_domains_pm'
+%% or the 'dynamic_domains_mu_light' scenario before this one for at least as many users.
 
--module(dynamic_domains_mam_lookup).
+-module(dynamic_domains_inbox_lookup).
 
 -include_lib("kernel/include/logger.hrl").
 
@@ -34,7 +33,7 @@ init() ->
     ?LOG_INFO("init metrics"),
     dynamic_domains:init(),
     amoc_xmpp_presence:init(),
-    amoc_xmpp_mam:init(),
+    amoc_xmpp_inbox:init(),
     ok.
 
 %% User helpers
@@ -47,17 +46,14 @@ start(MyId) ->
     do(MyId, Client),
     amoc_xmpp_presence:stop(Client).
 
--record(state, {last_mam_id = none :: amoc_xmpp_mam:last_id()}).
-
 -spec do(amoc_scenario:user_id(), escalus:client()) -> any().
 do(_MyId, Client) ->
-    TimeTable = timetable:new(mam_lookup, cfg(lookup_count), cfg(lookup_interval)),
-    timetable:do(Client, fun send_stanza/3, TimeTable, #state{}).
+    TimeTable = timetable:new(inbox_lookup, cfg(lookup_count), cfg(lookup_interval)),
+    timetable:do(Client, fun lookup/2, TimeTable).
 
--spec send_stanza(escalus:client(), mam_lookup, #state{}) -> #state{}.
-send_stanza(Client, mam_lookup, State = #state{last_mam_id = Id}) ->
-    NewId = amoc_xmpp_mam:lookup(Client, #{last_id => Id}),
-    State#state{last_mam_id = NewId}.
+-spec lookup(escalus:client(), inbox_lookup) -> any().
+lookup(Client, inbox_lookup) ->
+    amoc_xmpp_inbox:lookup(Client).
 
 %% Stanza handlers
 
@@ -65,7 +61,7 @@ sent_handler_spec() ->
     amoc_xmpp_presence:sent_handler_spec().
 
 received_handler_spec() ->
-    amoc_xmpp_mam:received_handler_spec(chat) ++ amoc_xmpp_presence:received_handler_spec().
+    amoc_xmpp_inbox:received_handler_spec() ++ amoc_xmpp_presence:received_handler_spec().
 
 %% Config helpers
 
