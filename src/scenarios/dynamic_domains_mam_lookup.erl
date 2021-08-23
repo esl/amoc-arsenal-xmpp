@@ -1,3 +1,17 @@
+%% @doc Each user performs the following steps:
+%%   - Log in to a dynamically created domain (see dynamic_domains.erl)
+%%   - Send presence: available (see amoc_xmpp_presence.erl)
+%%   - Send requests for MAM periodically, paging through results.
+%%     When the next page would be incomplete, start again from the beginning.
+%%     (see the config variables for this module and for amoc_xmpp_mam.erl)
+%%   - Send presence: unavailable and disconnect
+%%
+%% Prerequisites:
+%%   - Dynamic domains already created
+%%   - For non-empty MAM results: messages in the MAM archive
+%% You can generate both by running the 'dynamic_domains_pm' scenario before this one
+%% for at least as many users.
+
 -module(dynamic_domains_mam_lookup).
 
 -include_lib("kernel/include/logger.hrl").

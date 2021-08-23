@@ -1,3 +1,11 @@
+%% @doc Each user performs the following steps:
+%%   - Create the domain dynamically when needed (there is one creator per domain)
+%%   - Log in to the dynamically created domain (see dynamic_domains.erl)
+%%   - Send presence: available (see amoc_xmpp_presence.erl)
+%%   - Create all rooms assigned to this user (there is one creator per room, see amoc_xmpp_muc.erl)
+%%   - Send group chat messages to the created rooms periodically
+%%   - Send presence: unavailable and disconnect
+
 -module(dynamic_domains_muc_light).
 
 -include_lib("kernel/include/logger.hrl").

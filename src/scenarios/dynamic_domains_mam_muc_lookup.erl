@@ -1,3 +1,19 @@
+%% @doc Each user performs the following steps:
+%%   - Log in to a dynamically created domain (see dynamic_domains.erl)
+%%   - Send presence: available (see amoc_xmpp_presence.erl)
+%%   - For each room assigned to this user (there is one sender per room),
+%%     send requests for MAM archive periodically, paging through results.
+%%     When the next page would be incomplete, start again from the beginning.
+%%     (see the config variables for this module, amoc_xmpp_mam.erl and amoc_xmpp_muc.erl)
+%%   - Send presence: unavailable and disconnect
+%%
+%% Prerequisites:
+%%   - Dynamic domains already created
+%%   - MUC Light rooms already created
+%%   - For non-empty MAM results: messages in the MAM MUC archive
+%% You can generate both by running the 'dynamic_domains_muc_light' scenario before this one
+%% for the same room configuration and at least as many users.
+
 -module(dynamic_domains_mam_muc_lookup).
 
 -include_lib("kernel/include/logger.hrl").

@@ -1,3 +1,16 @@
+%% @doc Each user performs the following steps:
+%%   - Log in to a dynamically created domain (see dynamic_domains.erl)
+%%   - Send presence: available (see amoc_xmpp_presence.erl)
+%%   - Send requests for Inbox periodically
+%%     (see the config variables for this module and for 'amoc_xmpp_inbox')
+%%   - Send presence: unavailable and disconnect
+%%
+%% Prerequisites:
+%%   - Dynamic domains already created
+%%   - For non-empty inbox results: messages in Inbox
+%% You can generate both by running either the 'dynamic_domains_pm'
+%% or the 'dynamic_domains_mu_light' scenario before this one for at least as many users.
+
 -module(dynamic_domains_inbox_lookup).
 
 -include_lib("kernel/include/logger.hrl").
