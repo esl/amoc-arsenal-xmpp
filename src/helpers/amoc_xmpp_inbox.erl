@@ -35,7 +35,7 @@ lookup(Client) ->
     amoc_xmpp:send_request_and_get_response(Client, Req, Pred, Metric, Timeout).
 
 rsm_max() ->
-    Max = cfg(max_items_per_lookup),
+    Max = cfg(max_items_per_inbox_lookup),
     #xmlel{name = <<"set">>,
            attrs = [{<<"xmlns">>, ns(rsm)}],
            children = [#xmlel{name = <<"max">>,
@@ -45,8 +45,7 @@ rsm_max() ->
 -spec received_handler_spec() -> [amoc_xmpp_handlers:handler_spec()].
 received_handler_spec() ->
     [{fun(Stanza) -> is_inbox_result(Stanza) end,
-      fun() -> amoc_metrics:update_counter(inbox_messages_received) end} |
-     amoc_xmpp_presence:received_handler_spec()].
+      fun() -> amoc_metrics:update_counter(inbox_messages_received) end}].
 
 is_inbox_result(Stanza) ->
     NS = exml_query:path(Stanza, [{element, <<"result">>},
