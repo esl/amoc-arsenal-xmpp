@@ -176,12 +176,12 @@ kv_el(K, V) ->
 %% Handlers
 
 sent_stanza_handlers() ->
-    amoc_xmpp_handlers:stanza_handlers(
+    amoc_xmpp_handlers:make_stanza_handlers(
       [{fun is_muc_message/1,
         fun() -> amoc_metrics:update_counter(muc_messages_sent) end}]).
 
 received_stanza_handlers() ->
-    amoc_xmpp_handlers:stanza_handlers(
+    amoc_xmpp_handlers:make_stanza_handlers(
       [{fun is_muc_notification/1,
         fun() -> amoc_metrics:update_counter(muc_notifications_received) end},
        {fun is_muc_message/1,

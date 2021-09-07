@@ -194,12 +194,12 @@ room_entry_success_response_type([<<"110">>], <<"none">>, <<"participant">>) -> 
 %% Handlers
 
 sent_stanza_handlers() ->
-    amoc_xmpp_handlers:stanza_handlers(
+    amoc_xmpp_handlers:make_stanza_handlers(
       [{fun is_muc_message/1,
         fun() -> amoc_metrics:update_counter(muc_messages_sent) end}]).
 
 received_stanza_handlers() ->
-    amoc_xmpp_handlers:stanza_handlers(
+    amoc_xmpp_handlers:make_stanza_handlers(
       [{fun is_muc_presence/1,
         fun() -> amoc_metrics:update_counter(muc_presences_received) end},
        {fun is_muc_subject_notification/1,
