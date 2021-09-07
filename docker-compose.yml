@@ -27,21 +27,5 @@ services:
       AMOC_GRAPHITE_HOST: '"host.docker.internal"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
       AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
-  influxdb:
-    image: "influxdb:1.8"
-    ports:
-      - "2003:2003"
-    networks:
-      - metrics-network
-    environment:
-      INFLUXDB_GRAPHITE_ENABLED: "true"
-      INFLUXDB_GRAPHITE_TEMPLATES: 'instance.measurement*'
-  grafana:
-    image: "grafana/grafana:6.7.3"
-    ports:
-      - "3000:3000"
-    networks:
-      - metrics-network
 networks:
   amoc-test-network:
-  metrics-network:
