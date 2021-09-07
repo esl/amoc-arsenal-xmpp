@@ -17,6 +17,8 @@
       description => "Prefix of the dynamic domain names"},
     #{name => rest_port, default_value => 8088, verification => ?V(positive_integer),
       description => "Port number of the REST API for dynamic domains"},
+    #{name => rest_host, default_value => <<"localhost">>, verification => ?V(binary),
+      description => "Host name of the REST API for dynamic domains"},
     #{name => host_type, default_value => <<"localhost">>, verification => ?V(binary),
       description => "Host type for the created domains"},
     #{name => wait_time_for_domain_creation, default_value => 60,
@@ -47,7 +49,7 @@ connect_or_exit(Id, ExtraSpec, Opts) ->
 maybe_create_domain(UserId, UserSpec, Opts) ->
     case should_create_domain(UserId, Opts) of
         true ->
-            Host = proplists:get_value(host, UserSpec),
+            Host = cfg(rest_host),
             Domain = proplists:get_value(server, UserSpec),
             amoc_metrics:update_counter(domain_creation_requests),
             {Time, _} = timer:tc(fun create_domain/2, [Host, Domain]),
