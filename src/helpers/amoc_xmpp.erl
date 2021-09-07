@@ -8,8 +8,12 @@
 -export([bucket_neighbours/2]).
 
 -include_lib("kernel/include/logger.hrl").
+-define(V(X), (fun amoc_config_validation:X/1)).
 
--required_variable([#{name => xmpp_servers, description => "the list of XMPP servers"}]).
+-required_variable([
+    #{name => xmpp_servers, description => "the list of XMPP servers"},
+    #{name => legacy_tls, description => "use legacy tls connection",
+      default_value => false,  verification => ?V(boolean)}]).
 
 %% @doc Connects and authenticates a user with the given id and additional properties.
 %% If the passed proplist is empty, a default user spec created by
@@ -28,7 +32,8 @@ connect_or_exit(Id, ExtraSpec) ->
 -spec connect_or_exit(escalus_users:user_spec()) ->
     {ok, escalus_connection:client(), escalus_users:user_spec()}.
 connect_or_exit(Spec) ->
-    {ConnectionTime, ConnectionResult} = timer:tc(escalus_connection, start, [Spec]),
+    NewSpec = maybe_use_legacy_tls(Spec),
+    {ConnectionTime, ConnectionResult} = timer:tc(escalus_connection, start, [NewSpec]),
     case ConnectionResult of
         {ok, _, _} = Result ->
             amoc_metrics:update_counter(connections),
@@ -39,6 +44,39 @@ connect_or_exit(Spec) ->
             ?LOG_ERROR("Could not connect user=~p, reason=~p", [Spec, Error]),
             exit(connection_failed)
     end.
+
+maybe_use_legacy_tls(Spec) ->
+    case amoc_config:get(legacy_tls) of
+        false -> Spec;
+        true ->
+            ConnectionSteps = get_connection_steps(Spec),
+            NewConnectionSteps = [fun enforce_tls/2 | ConnectionSteps],
+            lists:keystore(connection_steps, 1, Spec,
+                           {connection_steps, NewConnectionSteps})
+    end.
+
+enforce_tls(Client, []) ->
+    escalus_connection:upgrade_to_tls(Client),
+    {Client, []}.
+
+%% this function is copied from escalus_connection module
+get_connection_steps(UserSpec) ->
+    case lists:keyfind(connection_steps, 1, UserSpec) of
+        false -> default_connection_steps();
+        {_, Steps} -> Steps
+    end.
+
+%% this function is copied from escalus_connection module
+default_connection_steps() ->
+    [start_stream,
+     stream_features,
+     maybe_use_ssl,
+     authenticate,
+     maybe_use_compression,
+     bind,
+     session,
+     maybe_stream_management,
+     maybe_use_carbons].
 
 %% @doc Picks a random server based on the config var `xmpp_servers'.
 %% This function expects a list of proplists defining the endpoint
