@@ -8,14 +8,14 @@ services:
     networks:
       - amoc-test-network
     environment:
-      AMOC_GRAPHITE_HOST: '"graphite"'
+      AMOC_GRAPHITE_HOST: '"host.docker.internal"'
   amoc-worker-1:
     hostname: "amoc-worker-1"
     image: "amoc-arsenal-xmpp"
     networks:
       - amoc-test-network
     environment:
-      AMOC_GRAPHITE_HOST: '"graphite"'
+      AMOC_GRAPHITE_HOST: '"host.docker.internal"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
       AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
   amoc-worker-2:
@@ -24,21 +24,24 @@ services:
     networks:
       - amoc-test-network
     environment:
-      AMOC_GRAPHITE_HOST: '"graphite"'
+      AMOC_GRAPHITE_HOST: '"host.docker.internal"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
       AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
-  graphite:
-    image: "graphiteapp/graphite-statsd:1.1.7-2"
+  influxdb:
+    image: "influxdb:1.8"
     ports:
       - "2003:2003"
-      - "8080:80"
     networks:
-      - amoc-test-network
+      - metrics-network
+    environment:
+      INFLUXDB_GRAPHITE_ENABLED: "true"
+      INFLUXDB_GRAPHITE_TEMPLATES: 'instance.measurement*'
   grafana:
     image: "grafana/grafana:6.7.3"
     ports:
       - "3000:3000"
     networks:
-      - amoc-test-network
+      - metrics-network
 networks:
   amoc-test-network:
+  metrics-network:
