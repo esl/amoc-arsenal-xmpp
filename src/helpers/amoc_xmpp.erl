@@ -48,35 +48,8 @@ connect_or_exit(Spec) ->
 maybe_use_legacy_tls(Spec) ->
     case amoc_config:get(legacy_tls) of
         false -> Spec;
-        true ->
-            ConnectionSteps = get_connection_steps(Spec),
-            NewConnectionSteps = [fun enforce_tls/2 | ConnectionSteps],
-            lists:keystore(connection_steps, 1, Spec,
-                           {connection_steps, NewConnectionSteps})
+        true -> lists:keystore(ssl, 1, Spec, {ssl, true})
     end.
-
-enforce_tls(Client, []) ->
-    escalus_connection:upgrade_to_tls(Client),
-    {Client, []}.
-
-%% this function is copied from escalus_connection module
-get_connection_steps(UserSpec) ->
-    case lists:keyfind(connection_steps, 1, UserSpec) of
-        false -> default_connection_steps();
-        {_, Steps} -> Steps
-    end.
-
-%% this function is copied from escalus_connection module
-default_connection_steps() ->
-    [start_stream,
-     stream_features,
-     maybe_use_ssl,
-     authenticate,
-     maybe_use_compression,
-     bind,
-     session,
-     maybe_stream_management,
-     maybe_use_carbons].
 
 %% @doc Picks a random server based on the config var `xmpp_servers'.
 %% This function expects a list of proplists defining the endpoint
