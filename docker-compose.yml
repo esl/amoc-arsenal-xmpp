@@ -8,14 +8,14 @@ services:
     networks:
       - amoc-test-network
     environment:
-      AMOC_GRAPHITE_HOST: '"host.docker.internal"'
+      AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
   amoc-worker-1:
     hostname: "amoc-worker-1"
     image: "amoc-arsenal-xmpp"
     networks:
       - amoc-test-network
     environment:
-      AMOC_GRAPHITE_HOST: '"host.docker.internal"'
+      AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
       AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
   amoc-worker-2:
@@ -24,7 +24,7 @@ services:
     networks:
       - amoc-test-network
     environment:
-      AMOC_GRAPHITE_HOST: '"host.docker.internal"'
+      AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
       AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
 networks:
