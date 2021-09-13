@@ -18,5 +18,6 @@ services:
       AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
       AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
+    entrypoint: [ "sh", "-c", 'AMOC_GRAPHITE_PREFIX="\"amoc.$${HOSTNAME}\"" /sbin/my_init']
 networks:
   amoc-test-network:
