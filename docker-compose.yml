@@ -1,8 +1,23 @@
+###############################################################################
+## you may need to build 'amoc-arsenal-xmpp' docker image, before running:   ##
+##                                                                           ##
+##     docker-compose up -d                                                  ##
+##                                                                           ##
+## it can be done using this command:                                        ##
+##                                                                           ##
+##     docker build . -t amoc-arsenal-xmpp                                   ##
+##                                                                           ##
+## alternatively, a custom amoc image can be provided by setting AMOC_IMAGE  ##
+## environment variable:                                                     ##
+##                                                                           ##
+##     AMOC_IMAGE=mongooseim/amoc-arsenal-xmpp docker-compose up -d          ##
+##                                                                           ##
+###############################################################################
 version: "3.9"
 services:
   amoc-master:
     hostname: "amoc-master"
-    image: "amoc-arsenal-xmpp"
+    image: "${AMOC_IMAGE:-amoc-arsenal-xmpp}"
     ports:
       - "4000:4000"
     networks:
@@ -10,7 +25,7 @@ services:
     environment:
       AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
   amoc-worker:
-    image: "amoc-arsenal-xmpp"
+    image: "${AMOC_IMAGE:-amoc-arsenal-xmpp}"
     scale: 2
     networks:
       - amoc-test-network
