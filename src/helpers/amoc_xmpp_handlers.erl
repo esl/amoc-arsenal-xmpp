@@ -15,6 +15,11 @@
 %% Helpers
 -export([ttd/2]).
 
+-required_variable(#{name => just_log_errors_in_handlers, default_value => false,
+                     description => "setting this flag prevents crashing on failures"
+                                    " in xmpp handlers (predicates or actions)",
+                     verification => fun erlang:is_boolean/1}).
+
 %% Types
 -type handler_spec() :: {escalus_connection:stanza_pred(), action()}.
 
@@ -84,12 +89,14 @@ check_predicate(Pred, Stanza) when is_function(Pred, 1) ->
         {ok, BoolRet} when is_boolean(BoolRet) ->
             BoolRet;
         {ok, InvalidRet} ->
-            ?LOG_ERROR("predicate function returns invalid value~n\tPredFN = ~p,~n\t"
-                       "Ret = ~p,~n\tStanza = ~p", [Pred, InvalidRet, Stanza]),
+            log_error_or_crash("predicate function returns invalid value",
+                               "\tPredFN = ~p,~n\tRet = ~p,~n\tStanza = ~p",
+                               [Pred, InvalidRet, Stanza]),
             false;
         {error, Error} ->
-            ?LOG_ERROR("predicate function crashed~n\tPredFN = ~p,~n\t"
-                       "Stanza = ~p,~n\tError = ~p", [Pred, Stanza, Error]),
+            log_error_or_crash("predicate function crashed",
+                               "\tPredFN = ~p,~n\tStanza = ~p,~n\tError = ~p",
+                               [Pred, Stanza, Error]),
             false
     end.
 
@@ -105,8 +112,9 @@ perform_action(Action, Client, Stanza, Metadata) ->
         {ok, _} ->
             ok;
         {error, Error} ->
-            ?LOG_ERROR("action function crashed~n\tActionFN = ~p,~n\t"
-                       "Args = ~p,~n\tError = ~p", [Action, Args, Error])
+            log_error_or_crash("action function crashed",
+                               "\tActionFN = ~p,~n\tArgs = ~p,~n\tError = ~p",
+                               [Action, Args, Error])
     end,
     Ret.
 
@@ -117,6 +125,16 @@ apply_safely(F, A) ->
     catch
         Class:Exception:Stacktrace ->
             {error, {Class, Exception, Stacktrace}}
+    end.
+
+log_error_or_crash(Msg, Format, Data) ->
+    ErrorIoList = io_lib:format(Msg ++ ":~n" ++ Format, Data),
+    ErrorMsg = lists:flatten(ErrorIoList),
+    case amoc_config:get(just_log_errors_in_handlers) of
+        true ->
+            ?LOG_ERROR(ErrorMsg);
+        false ->
+            error({stanza_handler_crashed, Msg, Data})
     end.
 
 %% Predicates
