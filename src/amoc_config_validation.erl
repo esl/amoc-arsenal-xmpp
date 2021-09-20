@@ -8,6 +8,9 @@ positive_integer(I) -> is_integer(I) andalso I > 0.
 
 nonnegative_integer(I) -> is_integer(I) andalso I >= 0.
 
-binary(Bitstring) -> is_binary(Bitstring).
+binary(Binary) -> is_binary(Binary).
 
 boolean(Boolean) -> is_boolean(Boolean).
+
+binary_or_undefined(BinaryOrUndefined) ->
+    binary(BinaryOrUndefined) orelse BinaryOrUndefined =:= undefined.
