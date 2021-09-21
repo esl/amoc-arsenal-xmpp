@@ -1,7 +1,7 @@
 ###############################################################################
 ## you may need to build 'amoc-arsenal-xmpp' docker image, before running:   ##
 ##                                                                           ##
-##     docker-compose up -d                                                  ##
+##     docker-compose up -d --scale amoc-worker=2                            ##
 ##                                                                           ##
 ## it can be done using this command:                                        ##
 ##                                                                           ##
@@ -13,7 +13,7 @@
 ##     AMOC_IMAGE=mongooseim/amoc-arsenal-xmpp docker-compose up -d          ##
 ##                                                                           ##
 ###############################################################################
-version: "3.9"
+version: "3.3"
 services:
   amoc-master:
     hostname: "amoc-master"
@@ -26,7 +26,6 @@ services:
       AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
   amoc-worker:
     image: "${AMOC_IMAGE:-amoc-arsenal-xmpp}"
-    scale: 2
     networks:
       - amoc-test-network
     environment:
