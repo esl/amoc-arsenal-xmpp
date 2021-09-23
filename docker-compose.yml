@@ -28,6 +28,10 @@ services:
     image: "${AMOC_IMAGE:-amoc-arsenal-xmpp}"
     networks:
       - amoc-test-network
+    ulimits: ## ensure that we can use all the ephemeral ports
+      nofile:
+        soft: 66000
+        hard: 66000
     environment:
       AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
