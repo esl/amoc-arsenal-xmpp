@@ -13,7 +13,9 @@
 -required_variable([
     #{name => xmpp_servers, description => "the list of XMPP servers"},
     #{name => legacy_tls, description => "use legacy tls connection",
-      default_value => false,  verification => ?V(boolean)}]).
+      default_value => false,  verification => ?V(boolean)},
+    #{name => connection_attempts, default_value => 1, verification => ?V(positive_integer),
+      description => "number of attempts to establish xmpp connection before exiting"}]).
 
 %% @doc Connects and authenticates a user with the given id and additional properties.
 %% If the passed proplist is empty, a default user spec created by
@@ -33,16 +35,27 @@ connect_or_exit(Id, ExtraSpec) ->
     {ok, escalus_connection:client(), escalus_users:user_spec()}.
 connect_or_exit(Spec) ->
     NewSpec = maybe_use_legacy_tls(Spec),
-    {ConnectionTime, ConnectionResult} = timer:tc(escalus_connection, start, [NewSpec]),
+    N = amoc_config:get(connection_attempts),
+    try_to_connect_n_times_or_exit(NewSpec, N).
+
+try_to_connect_n_times_or_exit(Spec, N) when N>0 ->
+    {ConnectionTime, ConnectionResult} = timer:tc(escalus_connection, start, [Spec]),
     case ConnectionResult of
         {ok, _, _} = Result ->
             amoc_metrics:update_counter(connections),
             amoc_metrics:update_time(connection, ConnectionTime),
             Result;
         Error ->
-            amoc_metrics:update_counter(connection_failures),
-            ?LOG_ERROR("Could not connect user=~p, reason=~p", [Spec, Error]),
-            exit(connection_failed)
+            ?LOG_ERROR("Could not connect user = ~p, reason = ~p, retries_left = ~p",
+                       [Spec, Error, N-1]),
+            case N of
+                1 ->
+                    amoc_metrics:update_counter(connection_failures),
+                    exit(connection_failed);
+                _ ->
+                    amoc_metrics:update_counter(connection_retries),
+                    try_to_connect_n_times_or_exit(Spec, N-1)
+            end
     end.
 
 maybe_use_legacy_tls(Spec) ->
