@@ -3,19 +3,19 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/)
 
-## [1.1.1](https://github.com/esl/amoc/compare/1.1.0...1.1.1) - 2021-07-19
+## [1.1.1](https://github.com/esl/amoc-arsenal-xmpp/compare/1.1.0...1.1.1) - 2021-07-19
 
 ### Changed:
 - Fix amoc dependency
 
-## [1.1.0](https://github.com/esl/amoc/compare/1.0.0...1.1.0) - 2021-07-16
+## [1.1.0](https://github.com/esl/amoc-arsenal-xmpp/compare/1.0.0...1.1.0) - 2021-07-16
 
 ### Changed:
 - Migrated to OTP24
 - Updated dependencies
 - Updated AMOC REST API
 
-## [1.0.0](https://github.com/esl/amoc/compare/1.0.0-beta...1.0.0) - 2019-12-05
+## [1.0.0](https://github.com/esl/amoc-arsenal-xmpp/compare/1.0.0-beta...1.0.0) - 2019-12-05
 
 ### Changed:
 - Switch log messages from lager to logger using macro (#9)
