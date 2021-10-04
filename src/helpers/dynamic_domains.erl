@@ -96,7 +96,8 @@ get_rest_api_host() ->
     case cfg(rest_host) of
         undefined ->
             proplists:get_value(host, amoc_xmpp:pick_server([]));
-        Binary -> Binary
+        Binary ->
+            Binary
     end.
 
 cfg(Name) ->

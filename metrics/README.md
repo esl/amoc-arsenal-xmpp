@@ -4,7 +4,7 @@ docker-compose up -d
 ```
 
 after that configure influxdb data source for grafana:
-```
+```bash
 curl 'http://admin:admin@localhost:3000/api/datasources' \
      -X POST -H 'Content-Type: application/json;charset=UTF-8' \
      -d '{"name": "InfluxDB", "access": "proxy", "type": "influxdb",
@@ -22,7 +22,7 @@ docker-compose exec influxdb influx
 ---
 
 MongooseIM reporter configuration should have the following format (configured in the `app.config` file):
-```
+```erlang
 {exometer_core, [
     {mongooseim_report_interval, 10000}, %% 10 seconds
     {report, [
@@ -44,7 +44,7 @@ where `instance_id` is some unique identifier w/o dots, e.g. the value returned 
 you may want to collect generic metrics (e.g. mem/cpu utilisation, network statistics, disk IO) from the
 machines where MIM/amoc containers are running. [Telegraf](https://docs.influxdata.com/telegraf/v1.19/)
 is a good tool for doing this. here is an example of `telegraf.conf` file:
-```
+```toml
 [global_tags]
 
 ##---------------------------------------------------------------------------------------------
