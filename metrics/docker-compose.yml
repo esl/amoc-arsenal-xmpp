@@ -1,0 +1,26 @@
+version: "3.3"
+services:
+  influxdb:
+    image: "influxdb:1.8"
+    ports:
+      - "2003:2003"
+    networks:
+      - metrics-network
+    volumes:
+      - type: "bind"
+        source: "./influxdb_data"
+        target: "/influxdb"
+      - type: "bind"
+        source: "./influxdb.conf"
+        target: "/influxdb.conf"
+        read_only: true
+    environment:
+      INFLUXDB_CONFIG_PATH: "/influxdb.conf"
+  grafana:
+    image: "grafana/grafana:6.7.3"
+    ports:
+      - "3000:3000"
+    networks:
+      - metrics-network
+networks:
+  metrics-network:

@@ -14,6 +14,7 @@
   {env, [
    {predefined_metrics, [{times, connection},
                          {counters, connections},
+                         {counters, connection_retries},
                          {counters, connection_failures}]}
   ]},
   {modules, []},
