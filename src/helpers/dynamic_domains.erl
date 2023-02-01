@@ -16,10 +16,10 @@
       description => "Number of consecutive users belonging to the same domain"},
     #{name => domain_prefix, default_value => <<"test-domain-">>, verification => ?V(binary),
       description => "Prefix of the dynamic domain names"},
-    #{name => rest_port, default_value => 8088, verification => ?V(positive_integer),
-      description => "Port number of the REST API for dynamic domains"},
-    #{name => rest_host, verification => ?V(binary_or_undefined),
-      description => "Host name of the REST API for dynamic domains"},
+    #{name => graphql_port, default_value => 5551, verification => ?V(positive_integer),
+      description => "Port number of the GraphQL API for dynamic domains"},
+    #{name => graphql_host, verification => ?V(binary_or_undefined),
+      description => "Host name of the GraphQL API for dynamic domains"},
     #{name => host_type, default_value => <<"localhost">>, verification => ?V(binary),
       description => "Host type for the created domains"},
     #{name => wait_time_for_domain_creation, default_value => 60,
@@ -73,12 +73,17 @@ is_first_user_in_domain(UserId) ->
 
 -spec create_domain(binary(), binary()) -> ok.
 create_domain(Host, Domain) ->
-    {ok, Conn} = gun:open(binary_to_list(Host), cfg(rest_port)),
-    Path = <<"/api/domains/", Domain/binary>>,
-    Body = <<"{\"host_type\": \"", (cfg(host_type))/binary, "\"}">>,
-    Stream = gun:put(Conn, Path, [{<<"content-type">>, <<"application/json">>}], Body),
-    {response, fin, 204, _} = gun:await(Conn, Stream),
+    {ok, Conn} = gun:open(binary_to_list(Host), cfg(graphql_port)),
+    Path = <<"/api/graphql">>,
+    Body = jiffy:encode(#{query => create_domain_mutation(Domain)}),
+    Stream = gun:post(Conn, Path, [{<<"content-type">>, <<"application/json">>}], Body),
+    {response, nofin, 200, _Headers} = gun:await(Conn, Stream),
+    {ok, _Body} = gun:await_body(Conn, Stream),
     gun:close(Conn).
+
+create_domain_mutation(Domain) ->
+    <<"mutation {domain {addDomain(domain: \"", Domain/binary,
+      "\", hostType: \"", (cfg(host_type))/binary, "\") {domain}}}">>.
 
 -spec domain_name(amoc_scenario:user_id()) -> binary().
 domain_name(UserId) ->
@@ -93,7 +98,7 @@ domain_id(UserId) ->
     BucketIdFromZero rem cfg(domain_count) + 1.
 
 get_rest_api_host() ->
-    case cfg(rest_host) of
+    case cfg(graphql_host) of
         undefined ->
             proplists:get_value(host, amoc_xmpp:pick_server([]));
         Binary ->
