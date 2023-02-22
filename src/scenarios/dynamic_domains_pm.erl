@@ -29,6 +29,7 @@ init() ->
     amoc_xmpp_presence:init(),
     amoc_metrics:init(counters, messages_sent),
     amoc_metrics:init(counters, messages_received),
+    amoc_metrics:init(counters, service_unavailable),
     amoc_metrics:init(times, message_ttd),
     ok.
 
@@ -69,12 +70,20 @@ sent_handler_spec() ->
      amoc_xmpp_presence:sent_handler_spec()].
 
 received_handler_spec() ->
-    [{fun escalus_pred:is_chat_message/1, fun handle_chat_message/3} |
+    [{fun escalus_pred:is_chat_message/1, fun handle_chat_message/3},
+     {fun is_service_unavailable/1, fun handle_service_unavailable/0} |
      amoc_xmpp_presence:received_handler_spec()].
 
 handle_chat_message(Client, Stanza, Metadata) ->
     amoc_metrics:update_counter(messages_received),
     amoc_xmpp_handlers:measure_ttd(Client, Stanza, Metadata).
+
+is_service_unavailable(Stanza) ->
+    escalus_pred:is_message(Stanza) andalso
+        escalus_pred:is_error(<<"cancel">>, <<"service-unavailable">>, Stanza).
+
+handle_service_unavailable() ->
+    amoc_metrics:update_counter(service_unavailable).
 
 %% Config helpers
 
