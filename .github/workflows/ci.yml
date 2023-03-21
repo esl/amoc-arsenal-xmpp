@@ -53,7 +53,7 @@ jobs:
     needs:
       - test
       - integration_test
-#    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master'
     env:
       OTP_RELEASE: 25.3
     steps:
