@@ -2,7 +2,7 @@
 
 # Get current repo version
 version="$(git rev-parse --short HEAD)"
-otp_vsn="${OTP_RELEASE:-24.0}-1"
+otp_vsn="${OTP_RELEASE:-25.3}"
 echo "ERLANG/OTP ${otp_vsn}"
 echo "AMOC-ARSENAL-XMPP ${version}"
 

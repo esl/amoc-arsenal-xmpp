@@ -1,48 +1,73 @@
- name: CI
+name: CI
 
- # Controls when the action will run.
- on:
-   # Triggers the workflow on push or pull request events but only for the master branch
-   push:
-     branches: [ master ]
-   pull_request:
-     branches: [ master ]
+# Controls when the action will run.
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
- jobs:
-   test:
-     name: OTP ${{matrix.otp}}
-     strategy:
-       matrix:
-         otp: ['24.0', '23.3.1']
-     runs-on: 'ubuntu-20.04'
-     steps:
-       - uses: actions/checkout@v2
-         with:
-           fetch-depth: 0
-       - uses: erlef/setup-beam@v1
-         with:
-           otp-version: ${{ matrix.otp }}
-           rebar3-version: '3.16.1'
-       - name: Compile project
-         run: rebar3 compile
-       - name: run xref check
-         run: rebar3 xref
-       - name: run dialyzer check
-         run: rebar3 dialyzer
+jobs:
+  test:
+    name: OTP ${{matrix.otp}}
+    strategy:
+      matrix:
+        otp: ['25.3', '24.3.4.9']
+    runs-on: 'ubuntu-22.04'
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          rebar3-version: '3.16.1'
+      - name: Compile project
+        run: rebar3 compile
+      - name: run xref check
+        run: rebar3 xref
+      - name: run dialyzer check
+        run: rebar3 dialyzer
 
-   integration_test:
-     name: docker container test with OTP ${{matrix.otp}}
-     strategy:
-       matrix:
-         otp: ['24.0', '23.3.1']
-     runs-on: 'ubuntu-20.04'
-     env:
-       OTP_RELEASE: ${{ matrix.otp }}
-     steps:
-       - uses: actions/checkout@v2
-         with:
-           fetch-depth: 0
-       - name: build docker image
-         run: ./ci/build_docker_image.sh
-       - name: test docker image
-         run: ./ci/test_docker_image.sh
+  integration_test:
+    name: docker container test with OTP ${{matrix.otp}}
+    strategy:
+      matrix:
+        otp: ['25.3', '24.3.4.9']
+    runs-on: 'ubuntu-22.04'
+    env:
+      OTP_RELEASE: ${{ matrix.otp }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: build docker image
+        run: ./ci/build_docker_image.sh
+      - name: test docker image
+        run: ./ci/test_docker_image.sh
+
+  docker_image:
+    name: build and push multi-platform docker image
+    runs-on: 'ubuntu-22.04'
+    needs:
+      - test
+      - integration_test
+#    if: github.ref == 'refs/heads/master'
+    env:
+      OTP_RELEASE: 25.3
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+      - name: build multi-platform docker image
+        run: ./ci/build_and_push_docker_image.sh
