@@ -3,12 +3,16 @@
 -define(V(X), (fun amoc_config_validation:X/1)).
 
 -required_variable(
-   [#{name => wait_time_after_presence_available,
-      default_value => 60,
+   [#{name => presence_enabled,
+      default_value => true,
+      verification => ?V(boolean),
+      description => "Enable or disable presences"},
+    #{name => wait_time_after_presence_available,
+      default_value => 0,
       verification => ?V(nonnegative_integer),
       description => "Wait time after sending presence: available (in seconds)"},
     #{name => wait_time_before_presence_unavailable,
-      default_value => 60,
+      default_value => 0,
       verification => ?V(nonnegative_integer),
       description => "Wait time before sending presence: unavailable (in seconds)"}
    ]).
@@ -26,13 +30,23 @@ init() ->
 
 -spec start(escalus:client()) -> any().
 start(Client) ->
-    send_presence_available(Client),
-    escalus_connection:wait(Client, cfg(wait_time_after_presence_available)).
+    case cfg(presence_enabled) of
+        true ->
+            send_presence_available(Client),
+            escalus_connection:wait(Client, cfg(wait_time_after_presence_available));
+        false ->
+            ok
+    end.
 
 -spec stop(escalus:client()) -> any().
 stop(Client) ->
-    escalus_connection:wait(Client, cfg(wait_time_before_presence_unavailable)),
-    send_presence_unavailable(Client),
+    case cfg(presence_enabled) of
+        true ->
+            escalus_connection:wait(Client, cfg(wait_time_before_presence_unavailable)),
+            send_presence_unavailable(Client);
+        false ->
+            ok
+    end,
     escalus_connection:stop(Client).
 
 %% Stanza
@@ -62,4 +76,8 @@ received_handler_spec() ->
 %% Config helpers
 
 cfg(Name) ->
-    timer:seconds(amoc_config:get(Name)).
+    convert(Name, amoc_config:get(Name)).
+
+convert(wait_time_after_presence_available, Value) -> timer:seconds(Value);
+convert(wait_time_before_presence_unavailable, Value) -> timer:seconds(Value);
+convert(_Name, Value) -> Value.

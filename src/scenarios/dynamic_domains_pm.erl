@@ -15,7 +15,13 @@
    [#{name => message_count, default_value => 60, verification => ?V(nonnegative_integer),
       description => "Number of messages sent by each user"},
     #{name => message_interval, default_value => 10, verification => ?V(nonnegative_integer),
-      description => "Interval (in seconds) between messages"}
+      description => "Interval (in seconds) between messages"},
+    #{name => delay_before_sending_messages,
+      default_value => 60, verification => ?V(nonnegative_integer),
+      description => "Delay before sending the first message (in seconds)"},
+    #{name => delay_after_sending_messages,
+      default_value => 60, verification => ?V(nonnegative_integer),
+      description => "Delay after sending the last message (in seconds)"}
    ]).
 
 -behaviour(amoc_scenario).
@@ -47,7 +53,9 @@ start(MyId) ->
 do(MyId, Client) ->
     NeighbourIds = amoc_xmpp:bucket_neighbours(MyId, 10),
     TimeTable = timetable:new(chat, cfg(message_count), cfg(message_interval)),
-    timetable:do(Client, fun send_stanza/3, TimeTable, #state{neighbours = NeighbourIds}).
+    escalus_connection:wait(Client, cfg(delay_before_sending_messages)),
+    timetable:do(Client, fun send_stanza/3, TimeTable, #state{neighbours = NeighbourIds}),
+    escalus_connection:wait(Client, cfg(delay_after_sending_messages)).
 
 %% One-to-one messages
 
@@ -91,4 +99,6 @@ cfg(Name) ->
     convert(Name, amoc_config:get(Name)).
 
 convert(message_interval, V) -> timer:seconds(V);
+convert(delay_before_sending_messages, V) -> timer:seconds(V);
+convert(delay_after_sending_messages, V) -> timer:seconds(V);
 convert(_Name, V) -> V.
