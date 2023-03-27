@@ -20,8 +20,12 @@
       description => "Delay between creating consecutive rooms (in seconds)"},
     #{name => room_message_interval, default_value => 10, verification => ?V(nonnegative_integer),
       description => "Interval (in seconds) between sending consecutive messages to each room"},
+    #{name => delay_before_creating_rooms, default_value => 60, verification => ?V(nonnegative_integer),
+      description => "Delay before creating the first room (in seconds)"},
     #{name => delay_before_sending_messages, default_value => 60, verification => ?V(nonnegative_integer),
-      description => "Delay between creating the last room and sending messages (in seconds)"}
+      description => "Delay between creating the last room and sending messages (in seconds)"},
+    #{name => delay_after_sending_messages, default_value => 60, verification => ?V(nonnegative_integer),
+      description => "Delay after sending messages (in seconds)"}
    ]).
 
 -behaviour(amoc_scenario).
@@ -55,9 +59,11 @@ start(MyId) ->
 -spec do(amoc_scenario:user_id(), escalus:client()) -> any().
 do(MyId, Client) ->
     MyRooms = amoc_xmpp_muc:rooms_to_create(MyId),
+    escalus_connection:wait(Client, cfg(delay_before_creating_rooms)),
     create_rooms(Client, MyId, MyRooms),
     escalus_connection:wait(Client, cfg(delay_before_sending_messages)),
-    send_messages(Client, MyId, MyRooms).
+    send_messages(Client, MyId, MyRooms),
+    escalus_connection:wait(Client, cfg(delay_after_sending_messages)).
 
 -spec create_rooms(escalus:client(), amoc_scenario:user_id(), [pos_integer()]) -> [].
 create_rooms(Client, MyId, MyRooms) ->
@@ -160,5 +166,7 @@ cfg(Name) ->
 
 convert(room_creation_interval, V) -> timer:seconds(V);
 convert(room_message_interval, V) -> timer:seconds(V);
+convert(delay_before_creating_rooms, V) -> timer:seconds(V);
 convert(delay_before_sending_messages, V) -> timer:seconds(V);
+convert(delay_after_sending_messages, V) -> timer:seconds(V);
 convert(_Name, V) -> V.
