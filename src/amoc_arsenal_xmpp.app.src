@@ -21,8 +21,7 @@
                          {counters, connection_retries},
                          {counters, connection_failures}]}
   ]},
-  {modules, []},
-
+  {mod, {amoc_arsenal_xmpp_app, []}},
   {maintainers, []},
   {licenses, ["Apache 2.0"]},
   {links, []}
