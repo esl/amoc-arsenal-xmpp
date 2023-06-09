@@ -13,16 +13,14 @@ jobs:
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: ['25.3', '24.3.4.9']
+        otp: ['26.0', '25.3', '24.3']
     runs-on: 'ubuntu-22.04'
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{ matrix.otp }}
-          rebar3-version: '3.16.1'
+          rebar3-version: '3.21.0'
       - name: Compile project
         run: rebar3 compile
       - name: run xref check
@@ -34,14 +32,16 @@ jobs:
     name: docker container test with OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: ['25.3', '24.3.4.9']
+        otp: ['25.3', '24.3']
     runs-on: 'ubuntu-22.04'
     env:
       OTP_RELEASE: ${{ matrix.otp }}
     steps:
       - uses: actions/checkout@v3
+      - uses: erlef/setup-beam@v1
         with:
-          fetch-depth: 0
+          otp-version: ${{ matrix.otp }}
+          rebar3-version: '3.21.0'
       - name: build docker image
         run: ./ci/build_docker_image.sh
       - name: test docker image
