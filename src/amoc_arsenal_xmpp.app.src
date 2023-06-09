@@ -19,7 +19,18 @@
    {predefined_metrics, [{times, connection},
                          {counters, connections},
                          {counters, connection_retries},
-                         {counters, connection_failures}]}
+                         {counters, connection_failures}]},
+   {exometer_predefined, [
+       {[erlang, system_info],
+           {function, erlang, system_info, ['$dp'], value, [port_count, process_count]},
+           []},
+       {[erlang, memory],
+           {function, erlang, memory, ['$dp'], value, [total, processes, processes_used, system, binary, ets]},
+           []},
+       {[amoc, users],
+           {function, ets, info, [amoc_users], proplist, [size]},
+           []}
+   ]}
   ]},
   {mod, {amoc_arsenal_xmpp_app, []}},
   {maintainers, []},
