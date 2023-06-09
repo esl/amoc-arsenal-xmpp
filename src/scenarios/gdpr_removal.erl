@@ -443,6 +443,9 @@ socket_opts() ->
 %%------------------------------------------------------------------------------------------------
 %% Node creation
 %%------------------------------------------------------------------------------------------------
+%%% This dialyzer ignore is because `wait_for_stanza` return type is exml only,
+%%% it doesn't detect that it might throw an exception
+-dialyzer({nowarn_function, create_pubsub_node/1}).
 create_pubsub_node(Client) ->
     ReqId = ?NODE_CREATION_ID,
     Request = publish_pubsub_stanza(Client, ReqId, #xmlel{name = <<"nothing">>}),

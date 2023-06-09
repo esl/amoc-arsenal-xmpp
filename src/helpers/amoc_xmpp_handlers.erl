@@ -25,11 +25,13 @@
 
 -type action() :: fun((escalus_connection:client(),
                        exml_stream:element(),
-                       escalus_connection:metadata()) -> any())
+                       metadata()) -> any())
                 | fun((escalus_connection:client(),
                        exml_stream:element()) -> any())
                 | fun((exml_stream:element()) -> any())
                 | fun(() -> any()).
+
+-type metadata() :: #{recv_timestamp => integer()}.
 
 -export_type([handler_spec/0, action/0]).
 
@@ -146,7 +148,7 @@ match_all(_) ->
 
 -spec measure_ttd(escalus_connection:client(),
                   exml_stream:element(),
-                  escalus_connection:metadata()) -> any().
+                  metadata()) -> any().
 measure_ttd(_Client, Stanza, Metadata) ->
     case exml_query:subelement(Stanza, <<"delay">>) of
         undefined -> amoc_metrics:update_time(message_ttd, ttd(Stanza, Metadata));
@@ -163,7 +165,7 @@ measure_sent_messages() ->
 
 %% Helpers
 
--spec ttd(exml_stream:element(), escalus_connection:metadata()) -> integer().
+-spec ttd(exml_stream:element(), metadata()) -> integer().
 ttd(#xmlel{attrs = Attrs}, #{recv_timestamp := RecvTimestamp}) ->
     {_, SentBin} = lists:keyfind(<<"timestamp">>, 1, Attrs),
     RecvTimestamp - binary_to_integer(SentBin).
