@@ -2,7 +2,7 @@
 
 source "$(dirname "$0")/helper.sh"
 enable_strict_mode
-cd "${git_root}/integration_test"
+cd "${git_root}/ci"
 
 scenario_name="dummy_scenario"
 

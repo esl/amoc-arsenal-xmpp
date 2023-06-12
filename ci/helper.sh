@@ -11,10 +11,10 @@ function enable_strict_mode() {
 }
 
 function create_code_path() {
-    dir="${git_root}/integration_test/extra_code_paths/${1}"
+    dir="${git_root}/ci/extra_code_paths/${1}"
     [ -d "$dir" ] || return 1
     erl_file="${dir}/${1}.erl"
-    dummy_scenario="${git_root}/integration_test/dummy_scenario.erl"
+    dummy_scenario="${git_root}/ci/dummy_scenario.erl"
     sed "s/-module(.*)./-module(${1})./" "$dummy_scenario" > "$erl_file"
     erlc -o "$dir" "$erl_file"
 }
@@ -64,12 +64,12 @@ function amoc_container_port() {
 }
 
 docker_compose() {
-    local compose_file="${git_root}/integration_test/docker-compose.yml"
+    local compose_file="${git_root}/ci/docker-compose.yml"
     docker compose -p "amoc-demo-cluster" -f "$compose_file" "$@"
 }
 
 function amoc_eval() {
-    local exec_path="/home/amoc/amoc_arsenal_xmpp/_build/default/rel/amoc_arsenal_xmpp/bin/amoc_arsenal_xmpp"
+    local exec_path="/amoc_arsenal_xmpp/_build/default/rel/amoc_arsenal_xmpp/bin/amoc_arsenal_xmpp"
     local service="$1"
     shift 1
     docker_compose exec -T "$service" "$exec_path" eval "$@"
