@@ -20,13 +20,15 @@ jobs:
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{ matrix.otp }}
-          rebar3-version: '3.21.0'
+          rebar3-version: '3.22.0'
       - name: Compile project
         run: rebar3 compile
       - name: run xref check
         run: rebar3 xref
       - name: run dialyzer check
         run: rebar3 dialyzer
+      - name: run common tests
+        run: rebar3 ct
 
   integration_test:
     name: docker container test with OTP ${{matrix.otp}}
