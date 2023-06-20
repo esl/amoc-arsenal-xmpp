@@ -127,7 +127,7 @@ get_scenario_info_returns_404_when_scenario_does_not_exist(_Config) ->
 get_scenario_info_returns_200_when_scenario_exists(Config) ->
     %% given scenario exists
     put_scenarios_returns_200_when_scenario_valid(Config),
-    mock_amoc_amoc_scenario(),
+    mock_amoc_scenario(),
     %% when
     {CodeHttp, Body} = amoc_api_helper:get(?SCENARIOS_URL_I(?SAMPLE_SCENARIO)),
     ?assertEqual(200, CodeHttp),
@@ -162,7 +162,7 @@ get_scenario_defaults_returns_404_when_scenario_does_not_exist(_Config) ->
 get_scenario_defaults_returns_200_when_scenario_exists(Config) ->
     %% given scenario exists
     put_scenarios_returns_200_when_scenario_valid(Config),
-    mock_amoc_amoc_scenario(),
+    mock_amoc_scenario(),
     %% when
     {CodeHttp, Body} = amoc_api_helper:get(?SCENARIOS_URL_D(?SAMPLE_SCENARIO)),
     ?assertEqual(200, CodeHttp),
@@ -171,7 +171,7 @@ get_scenario_defaults_returns_200_when_scenario_exists(Config) ->
     ?assertMatch(ExpectedInfo, Body),
     meck:unload(amoc_scenario).
 
-mock_amoc_amoc_scenario() ->
+mock_amoc_scenario() ->
     ok = meck:new(amoc_scenario, [passthrough]),
     Fun = fun() ->
             Modules = meck:passthrough([]),
