@@ -13,4 +13,4 @@ RUN rebar3 release
 
 ENV PATH "/amoc_arsenal_xmpp/_build/default/rel/amoc_arsenal_xmpp/bin:${PATH}"
 
-CMD ["/amoc_arsenal_xmpp/_build/default/rel/amoc_arsenal_xmpp/bin/amoc_arsenal_xmpp", "console", "-noshell", "-noinput", "+Bd"]
+CMD ["amoc_arsenal_xmpp", "console", "-noshell", "-noinput", "+Bd"]

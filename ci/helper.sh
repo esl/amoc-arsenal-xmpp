@@ -58,7 +58,7 @@ function amoc_container_port() {
          echo 4000 ;;
        amoc-worker-[0-9])
          echo "400${service#amoc-worker-}" ;;
-       *) 
+       *)
          return 1 ;;
     esac
 }
@@ -69,7 +69,7 @@ docker_compose() {
 }
 
 function amoc_eval() {
-    local exec_path="/amoc_arsenal_xmpp/_build/default/rel/amoc_arsenal_xmpp/bin/amoc_arsenal_xmpp"
+    local exec_path="amoc_arsenal_xmpp"
     local service="$1"
     shift 1
     docker_compose exec -T "$service" "$exec_path" eval "$@"

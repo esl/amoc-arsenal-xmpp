@@ -1,7 +1,7 @@
-version: "3.4"
-
 x-amoc-defaults: &amoc-defaults
-  image: "amoc-arsenal-xmpp:latest"
+  build:
+    context: ../
+    dockerfile: Dockerfile
   networks:
     - amoc-test-network
   volumes:
