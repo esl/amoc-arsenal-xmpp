@@ -1,11 +1,14 @@
 #!/bin/bash
 
-source "$(dirname "$0")/helper.sh"
-enable_strict_mode
-cd "$git_root"
-
+# Get current repo version
 version="$(git rev-parse --short HEAD)"
 otp_vsn="${OTP_RELEASE:-25.3}"
-echo "ERLANG/OTP '${otp_vsn}'"
+echo "ERLANG/OTP ${otp_vsn}"
+echo "AMOC-ARSENAL-XMPP ${version}"
 
-docker_compose build --build-arg "otp_vsn=${otp_vsn}"
+docker build \
+	-f Dockerfile \
+	-t "amoc-arsenal-xmpp:${version}" \
+	-t "amoc-arsenal-xmpp:latest" \
+	--build-arg otp_vsn="${otp_vsn}" \
+	.

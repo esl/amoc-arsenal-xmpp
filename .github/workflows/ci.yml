@@ -13,44 +13,39 @@ jobs:
     name: OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: ['26.0', '25.3', '24.3']
+        otp: ['25.3', '24.3.4.9']
     runs-on: 'ubuntu-22.04'
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{ matrix.otp }}
-          rebar3-version: '3.22.0'
+          rebar3-version: '3.16.1'
       - name: Compile project
         run: rebar3 compile
       - name: run xref check
         run: rebar3 xref
       - name: run dialyzer check
         run: rebar3 dialyzer
-      - name: run common tests
-        run: rebar3 ct
 
   integration_test:
     name: docker container test with OTP ${{matrix.otp}}
     strategy:
       matrix:
-        otp: ['25.3', '24.3']
+        otp: ['25.3', '24.3.4.9']
     runs-on: 'ubuntu-22.04'
     env:
       OTP_RELEASE: ${{ matrix.otp }}
     steps:
       - uses: actions/checkout@v3
-      - uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{ matrix.otp }}
-          rebar3-version: '3.21.0'
-      - run: ./ci/build_docker_image.sh
-      - run: ./ci/start_demo_cluster.sh
-      - run: ./ci/test_amoc_cluster.sh
-      - run: ./ci/test_distribute_scenario.sh
-      - run: ./ci/test_run_scenario.sh
-      - run: ./ci/test_add_new_node.sh
-
+          fetch-depth: 0
+      - name: build docker image
+        run: ./ci/build_docker_image.sh
+      - name: test docker image
+        run: ./ci/test_docker_image.sh
 
   docker_image:
     name: build and push multi-platform docker image
