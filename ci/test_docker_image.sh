@@ -6,7 +6,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 network="amoc-arsenal-test-network"
-path_to_exec="/home/amoc/amoc_arsenal_xmpp/bin/amoc_arsenal_xmpp"
+path_to_exec="amoc_arsenal_xmpp"
 amoc_nodes="['amoc_arsenal_xmpp@amoc-arsenal-1']"
 number_of_nodes=3
 
