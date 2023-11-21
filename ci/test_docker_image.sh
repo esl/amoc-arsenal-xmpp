@@ -5,34 +5,44 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-network="amoc-arsenal-test-network"
-path_to_exec="amoc_arsenal_xmpp"
-amoc_nodes="['amoc_arsenal_xmpp@amoc-arsenal-1']"
-number_of_nodes=3
+cd "$(git rev-parse --show-toplevel)/ci"
+docker compose up --wait --wait-timeout 100 --scale amoc-worker=2
 
-docker network create "${network}"
+function assert_equal()
+{
+  local entity=$1
+  local expected_value=$2
+  local received_value=$3
+  [ "$expected_value" = "$received_value" ] \
+    || { echo -e "invalid ${entity}\n\texpected: '${expected_value}'\n\treceived: '${received_value}'";
+         exit 1; }
+}
 
-for i in $(seq 1 "$number_of_nodes"); do
-  name="amoc-arsenal-$i"
-  docker run -td --rm -e AMOC_NODES="${amoc_nodes}" \
-             --name "$name" -h "$name" --network "${network}" \
-             --health-cmd="\"${path_to_exec}\" status" \
-             amoc-arsenal-xmpp:latest
-done
+function assert_match()
+{
+  local entity=$1
+  local pattern=$2
+  local value=$3
+  ( echo "$value" | grep -qxE -e "$pattern" ) \
+    || { echo -e "${entity} doesn't match the pattern:\n\tpattern: '${pattern}'\n\tvalue:   '${value}'";
+         exit 1; }
+}
 
-for i in $(seq 1 "$number_of_nodes"); do
-  name="amoc-arsenal-$i"
-  ./ci/wait_for_healthcheck.sh "$name"
-done
+function get_nodes()
+{
+  curl -s -X GET "http://localhost:4000/nodes" -H  "accept: application/json" \
+    | jq --compact-output '.nodes | keys' \
+    | gsed -nE 's/[^"]*"([^"]+)"[^"]*/\1\n/gp'
+}
 
-for i in $(seq 1 "$number_of_nodes"); do
-  name="amoc-arsenal-$i"
-  output="$(docker exec -t "$name" "$path_to_exec" eval "nodes().")"
-  echo  "container == '${name}', nodes() == ${output}"
-  for j in $(seq 1 "$number_of_nodes"); do
-    if [ "$j" -ne "$i" ]; then
-      node_name="amoc_arsenal_xmpp@amoc-arsenal-$j"
-      echo "$output" | grep -q "$node_name"
-    fi
-  done
+function number_of_nodes()
+{
+  curl -s -X GET "http://localhost:4000/nodes" -H  "accept: application/json" \
+    | jq '.nodes | length'
+}
+
+assert_equal "number of nodes" 3 "$(number_of_nodes)"
+
+for node in $(get_nodes); do
+  assert_match "node name" "amoc_arsenal_xmpp@.*" "$node"
 done

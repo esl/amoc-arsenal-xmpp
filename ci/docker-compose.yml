@@ -24,6 +24,8 @@ services:
       - amoc-test-network
     environment:
       AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
+    healthcheck:
+      test: "amoc_arsenal_xmpp status"
   amoc-worker:
     image: "${AMOC_IMAGE:-amoc-arsenal-xmpp}"
     networks:
@@ -36,6 +38,15 @@ services:
       AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
       AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
-    entrypoint: [ "sh", "-c", '/start-amoc.sh "amoc-worker-[0-9]+"']
+    volumes:
+      - type: bind
+        source: start-amoc-worker.sh
+        target: /start-amoc-worker.sh
+    entrypoint: [ "sh", "/start-amoc-worker.sh"]
+    deploy:
+      mode: replicated
+      replicas: 6
+    healthcheck:
+      test: "amoc_arsenal_xmpp status"
 networks:
   amoc-test-network:
