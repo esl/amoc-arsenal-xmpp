@@ -2,9 +2,6 @@ ARG otp_vsn=25.3
 FROM erlang:${otp_vsn}
 MAINTAINER Erlang Solutions <mongoose-im@erlang-solutions.com>
 
-RUN apt-get update
-RUN apt-get install -y host
-
 WORKDIR /amoc_arsenal_xmpp
 COPY ./ ./
 
@@ -16,4 +13,8 @@ RUN rebar3 release
 
 ENV PATH "/amoc_arsenal_xmpp/_build/default/rel/amoc_arsenal_xmpp/bin:${PATH}"
 
-CMD ["amoc_arsenal_xmpp", "console", "-noshell", "-noinput", "+Bd"]
+COPY --chmod=500 <<-EOF /start_amoc.sh
+	amoc_arsenal_xmpp console -noshell -noinput +Bd
+EOF
+
+CMD ["sh", "/start_amoc.sh"]

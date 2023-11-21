@@ -38,15 +38,18 @@ services:
       AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
       AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
-    volumes:
-      - type: bind
-        source: start-amoc-worker.sh
-        target: /start-amoc-worker.sh
-    entrypoint: [ "sh", "/start-amoc-worker.sh"]
+    entrypoint: [ "sh", "-c", 'AMOC_GRAPHITE_PREFIX="\"amoc-worker.$$HOSTNAME\"" /start_amoc.sh']
     deploy:
       mode: replicated
       replicas: 6
     healthcheck:
       test: "amoc_arsenal_xmpp status"
+  graphite:
+    image: "graphiteapp/graphite-statsd:1.1.10-4"
+    ports:
+      - "8080:80"
+      - "2003:2003"
+    profiles:
+      - with_graphite
 networks:
   amoc-test-network:
