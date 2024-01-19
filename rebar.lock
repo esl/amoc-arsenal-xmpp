@@ -1,11 +1,8 @@
 {"1.2.0",
-[{<<"amoc">>,
-  {git,"https://github.com/esl/amoc",
-       {ref,"dc2a8250a7a3f5985f25d59a177a6200a7028528"}},
-  1},
+[{<<"amoc">>,{pkg,<<"amoc">>,<<"3.0.0">>},1},
  {<<"amoc_arsenal">>,
   {git,"https://github.com/esl/amoc-arsenal.git",
-       {ref,"3d80eba7bc17cccc06bb373c17565e8f4a279503"}},
+       {ref,"1922067af08bc36bb82d2d7be4970d2b5a3a8e8c"}},
   0},
  {<<"amoc_rest">>,
   {git,"https://github.com/esl/amoc_rest.git",
@@ -43,11 +40,12 @@
  {<<"quickrand">>,{pkg,<<"quickrand">>,<<"2.0.5">>},2},
  {<<"ranch">>,{pkg,<<"ranch">>,<<"1.8.0">>},3},
  {<<"rfc3339">>,{pkg,<<"rfc3339">>,<<"0.9.0">>},2},
- {<<"telemetry">>,{pkg,<<"telemetry">>,<<"1.2.1">>},2},
+ {<<"telemetry">>,{pkg,<<"telemetry">>,<<"1.2.1">>},1},
  {<<"uuid">>,{pkg,<<"uuid_erl">>,<<"2.0.5">>},1},
  {<<"worker_pool">>,{pkg,<<"worker_pool">>,<<"6.0.0">>},1}]}.
 [
 {pkg_hash,[
+ {<<"amoc">>, <<"DFBE52A36237EE7659D9E691F392E16DC5634346800CBB4A1F971143984C1DC1">>},
  {<<"base16">>, <<"F0549F732E03BE8124ED0D19FD5EE52146CC8BE24C48CBC3F23AB44B157F11A2">>},
  {<<"bbmustache">>, <<"0CABDCE0DB9FE6D3318131174B9F2B351328A4C0AFBEB3E6E99BB0E02E9B621D">>},
  {<<"bear">>, <<"430419C1126B477686CDE843E88BA0F2C7DC5CDF0881C677500074F704339A99">>},
@@ -76,6 +74,7 @@
  {<<"uuid">>, <<"60FAEEB7EDFD40847ED13CB0DD1044BAABE4E79A00C0CA9C4D13A073914B1016">>},
  {<<"worker_pool">>, <<"F7B442B30121EED6D8C828833533E5C15DB61E4AB2EF343C8B67824267656822">>}]},
 {pkg_hash_ext,[
+ {<<"amoc">>, <<"66A377798F9F4F6361C223A586FEB32CA6B3401FA106850C9D9682FEB3BBD5B9">>},
  {<<"base16">>, <<"06EA2D48343282E712160BA89F692B471DB8B36ABE8394F3445FF9032251D772">>},
  {<<"bbmustache">>, <<"688B33A4D5CC2D51F575ADF0B3683FC40A38314A2F150906EDCFC77F5B577B3B">>},
  {<<"bear">>, <<"157B67901ADF84FF0DA6EAE035CA1292A0AC18AA55148154D8C582B2C68959DB">>},
