@@ -234,19 +234,26 @@ create_pubsub_node(Client) ->
     %Request = escalus_pubsub_stanza:create_node(Client, ReqId, ?NODE),
     escalus:send(Client, Request),
 
-    CreateNodeResult = (catch escalus:wait_for_stanza(Client, amoc_config:get(iq_timeout))),
+    try
+        CreateNodeResult = escalus:wait_for_stanza(Client, amoc_config:get(iq_timeout)),
+        case escalus_pred:is_iq_result(Request, CreateNodeResult) of
+            true ->
+                ?LOG_DEBUG("node creation ~p (~p)", [?NODE, self()]),
+                iq_metrics:response(ReqId, result);
+            false ->
+                iq_metrics:response(ReqId, error),
+                ?LOG_ERROR("Error creating node: ~p", [CreateNodeResult]),
+                exit(node_creation_failed)
+        end
 
-    case {escalus_pred:is_iq_result(Request, CreateNodeResult), CreateNodeResult} of
-        {true, _} ->
-            ?LOG_DEBUG("node creation ~p (~p)", [?NODE, self()]),
-            iq_metrics:response(ReqId, result);
-        {false, {'EXIT', {timeout_when_waiting_for_stanza, _}}} ->
+    catch
+        exit:{timeout_when_waiting_for_stanza, _} = Exit ->
             iq_metrics:timeout(ReqId, delete),
-            ?LOG_ERROR("Timeout creating node: ~p", [CreateNodeResult]),
+            ?LOG_ERROR("Timeout creating node: ~p", [Exit]),
             exit(node_creation_timeout);
-        {false, _} ->
-            iq_metrics:response(ReqId, error),
-            ?LOG_ERROR("Error creating node: ~p", [CreateNodeResult]),
+        Error:Reason ->
+            amoc_metrics:update_counter(node_creation_failure),
+            ?LOG_ERROR("Error creating node: ~p", [{Error, Reason}]),
             exit(node_creation_failed)
     end.
 

@@ -203,7 +203,7 @@ send_and_recv_escalus_handlers() ->
 -spec read_messages_from_archive_since_timestamp(
         Client :: escalus:client(),
         Timestamp :: erlang:timestamp(),
-        Timeout :: timer:time()
+        Timeout :: non_neg_integer()
        ) -> any().
 read_messages_from_archive_since_timestamp(Client, Timestamp, Timeout) ->
     case catch do_read_messages_from_archive_since_timestamp(Client,
@@ -223,7 +223,7 @@ read_messages_from_archive_since_timestamp(Client, Timestamp, Timeout) ->
 -spec do_read_messages_from_archive_since_timestamp(
         Client :: escalus:client(),
         Timestamp :: erlang:timestamp(),
-        Timeout :: timer:time()
+        Timeout :: non_neg_integer()
        ) -> ResponseTimeMicroseconds :: integer() |
             no_return(). % escalus throws an exception after Timeout
 do_read_messages_from_archive_since_timestamp(Client, Timestamp, Timeout) ->
@@ -239,7 +239,7 @@ do_read_messages_from_archive_since_timestamp(Client, Timestamp, Timeout) ->
 
 -spec receive_mam_messages_until_end(
         Client :: escalus_connection:client(),
-        Timeout :: timer:time()) -> ok | no_return().
+        Timeout :: non_neg_integer()) -> ok | no_return().
 receive_mam_messages_until_end(Client, Timeout) ->
     Stanza = escalus_connection:get_stanza(Client, mam_message_timeout, Timeout),
     ?LOG_DEBUG("Stanza = ~p", [Stanza]),
@@ -254,7 +254,7 @@ receive_mam_messages_until_end(Client, Timeout) ->
 -spec maybe_mam_fin_message(
         Stanza :: exml:element(),
         Client :: escalus_connection:client(),
-        Timeout :: timer:time()) -> ok | no_return().
+        Timeout :: non_neg_integer()) -> ok | no_return().
 maybe_mam_fin_message(Stanza, Client, Timeout) ->
     case is_mam_fin_complete_message(Stanza) of
         true ->

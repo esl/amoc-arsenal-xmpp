@@ -38,5 +38,5 @@ foldl(_, Acc, _) -> Acc.
 -spec select_session(db_handle(), tuple() | inet:port_number()) -> [].
 select_session(_, _) -> [].
 
--spec size(db_handle()) -> integer().
-size(_) -> 0.
+-spec size(db_handle()) -> pos_integer().
+size(_) -> 1.

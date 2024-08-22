@@ -291,23 +291,27 @@ create_pubsub_node(Client) ->
     Request = escalus_pubsub_stanza:create_node(Client, ReqId,
                                                 Node, NodeConfig),
     escalus:send(Client, Request),
-    {CreateNodeTime, CreateNodeResult} = timer:tc(
-        fun() ->
-            catch escalus:wait_for_stanza(Client, amoc_config:get(iq_timeout))
-        end),
-
-    case {escalus_pred:is_iq_result(Request, CreateNodeResult), CreateNodeResult} of
-        {true, _} ->
-            ?LOG_DEBUG("node creation ~p (~p)", [Node, self()]),
-            amoc_metrics:update_counter(node_creation_success, 1),
-            amoc_metrics:update_time(node_creation, CreateNodeTime);
-        {false, {'EXIT', {timeout_when_waiting_for_stanza, _}}} ->
+    try
+        Fun = fun() -> escalus:wait_for_stanza(Client, amoc_config:get(iq_timeout)) end,
+        {CreateNodeTime, CreateNodeResult} = timer:tc(Fun),
+        case escalus_pred:is_iq_result(Request, CreateNodeResult) of
+            true ->
+                ?LOG_DEBUG("node creation ~p (~p)", [Node, self()]),
+                amoc_metrics:update_counter(node_creation_success, 1),
+                amoc_metrics:update_time(node_creation, CreateNodeTime);
+            false ->
+                amoc_metrics:update_counter(node_creation_failure, 1),
+                ?LOG_ERROR("Error creating node: ~p", [CreateNodeResult]),
+                exit(node_creation_failed)
+        end
+    catch
+        exit:{timeout_when_waiting_for_stanza, _} = Exit ->
             amoc_metrics:update_counter(node_creation_timeout, 1),
-            ?LOG_ERROR("Timeout creating node: ~p", [CreateNodeResult]),
+            ?LOG_ERROR("Timeout creating node: ~p", [Exit]),
             exit(node_creation_timeout);
-        {false, _} ->
-            amoc_metrics:update_counter(node_creation_failure, 1),
-            ?LOG_ERROR("Error creating node: ~p", [CreateNodeResult]),
+        Error:Reason ->
+            amoc_metrics:update_counter(node_creation_failure),
+            ?LOG_ERROR("Error creating node: ~p", [{Error, Reason}]),
             exit(node_creation_failed)
     end,
     Node.
