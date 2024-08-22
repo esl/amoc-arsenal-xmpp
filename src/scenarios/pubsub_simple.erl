@@ -209,7 +209,7 @@ start_user(Client) ->
     user_loop(Client, Node, #{}).
 
 create_new_node(Client) ->
-    amoc_throttle:send_and_wait(?NODE_CREATION_THROTTLING, create_node),
+    amoc_throttle:wait(?NODE_CREATION_THROTTLING),
     Node = create_pubsub_node(Client),
     amoc_coordinator:add(?MODULE, {Client, Node}),
     Node.

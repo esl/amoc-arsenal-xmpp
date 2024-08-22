@@ -10,19 +10,18 @@ on:
 
 jobs:
   test:
-    name: OTP ${{matrix.otp}}
+    name: OTP ${{matrix.otp_vsn}}
     strategy:
       matrix:
-        otp: ['25.3', '24.3.4.9']
-    runs-on: 'ubuntu-22.04'
+        otp_vsn: ['27', '26', '25']
+        rebar_vsn: ['3.23.0']
+    runs-on: 'ubuntu-24.04'
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{ matrix.otp }}
-          rebar3-version: '3.16.1'
+          otp-version: ${{ matrix.otp_vsn }}
+          rebar3-version: ${{ matrix.rebar_vsn }}
       - name: Compile project
         run: rebar3 compile
       - name: run xref check
@@ -31,17 +30,15 @@ jobs:
         run: rebar3 dialyzer
 
   integration_test:
-    name: docker container test with OTP ${{matrix.otp}}
+    name: docker container test with OTP ${{matrix.otp_vsn}}
     strategy:
       matrix:
-        otp: ['25.3', '24.3.4.9']
-    runs-on: 'ubuntu-22.04'
+        otp_vsn: ['27', '26', '25']
+    runs-on: 'ubuntu-24.04'
     env:
-      OTP_RELEASE: ${{ matrix.otp }}
+      OTP_RELEASE: ${{ matrix.otp_vsn }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
       - name: build docker image
         run: ./ci/build_docker_image.sh
       - name: test docker image
@@ -53,17 +50,15 @@ jobs:
 
   docker_image:
     name: build and push multi-platform docker image
-    runs-on: 'ubuntu-22.04'
+    runs-on: 'ubuntu-24.04'
     needs:
       - test
       - integration_test
     if: github.ref == 'refs/heads/master'
     env:
-      OTP_RELEASE: 25.3
+      OTP_RELEASE: 27.0
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx

@@ -332,7 +332,7 @@ start_user(Client) ->
     user_loop(Client, #{Id=>{new, TS}}).
 
 create_new_node(Client) ->
-    amoc_throttle:send_and_wait(?NODE_CREATION_THROTTLING, create_node),
+    amoc_throttle:wait(?NODE_CREATION_THROTTLING),
     create_pubsub_node(Client).
 
 user_loop(Client, Requests) ->
@@ -494,7 +494,7 @@ caps() ->
 %% Room creation
 %%------------------------------------------------------------------------------------------------
 request_muc_light_room(Client) ->
-    amoc_throttle:send_and_wait(?ROOM_CREATION_THROTTLING, create_room),
+    amoc_throttle:wait(?ROOM_CREATION_THROTTLING),
     Id = ?ROOM_CREATION_ID,
     MucHost = amoc_config:get(muc_host),
     CreateRoomStanza = escalus_stanza:iq_set(?NS_MUC_LIGHT_CREATION, []),
