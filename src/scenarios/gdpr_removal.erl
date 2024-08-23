@@ -332,7 +332,7 @@ start_user(Client) ->
     user_loop(Client, #{Id=>{new, TS}}).
 
 create_new_node(Client) ->
-    amoc_throttle:send_and_wait(?NODE_CREATION_THROTTLING, create_node),
+    amoc_throttle:wait(?NODE_CREATION_THROTTLING),
     create_pubsub_node(Client).
 
 user_loop(Client, Requests) ->
@@ -448,25 +448,30 @@ create_pubsub_node(Client) ->
     Request = publish_pubsub_stanza(Client, ReqId, #xmlel{name = <<"nothing">>}),
     escalus:send(Client, Request),
 
-    {CreateNodeTime, CreateNodeResult} = timer:tc(
-        fun() ->
-            catch escalus:wait_for_stanza(Client, amoc_config:get(iq_timeout))
-        end),
-
-    case {escalus_pred:is_iq_result(Request, CreateNodeResult), CreateNodeResult} of
-        {true, _} ->
-            ?LOG_DEBUG("node creation ~p (~p)", [?NODE, self()]),
-            amoc_metrics:update_counter(node_creation_success),
-            amoc_metrics:update_time(node_creation, CreateNodeTime);
-        {false, {'EXIT', {timeout_when_waiting_for_stanza, _}}} ->
+    try
+        Fun = fun() -> escalus:wait_for_stanza(Client, amoc_config:get(iq_timeout)) end,
+        {CreateNodeTime, CreateNodeResult} = timer:tc(Fun),
+        case escalus_pred:is_iq_result(Request, CreateNodeResult) of
+            true ->
+                ?LOG_DEBUG("node creation ~p (~p)", [?NODE, self()]),
+                amoc_metrics:update_counter(node_creation_success),
+                amoc_metrics:update_time(node_creation, CreateNodeTime);
+            false ->
+                amoc_metrics:update_counter(node_creation_failure),
+                ?LOG_ERROR("Error creating node: ~p", [CreateNodeResult]),
+                exit(node_creation_failed)
+        end
+    catch
+        exit:{timeout_when_waiting_for_stanza, _} = Exit ->
             amoc_metrics:update_counter(node_creation_timeout),
-            ?LOG_ERROR("Timeout creating node: ~p", [CreateNodeResult]),
+            ?LOG_ERROR("Timeout creating node: ~p", [Exit]),
             exit(node_creation_timeout);
-        {false, _} ->
+        Error:Reason ->
             amoc_metrics:update_counter(node_creation_failure),
-            ?LOG_ERROR("Error creating node: ~p", [CreateNodeResult]),
+            ?LOG_ERROR("Error creating node: ~p", [{Error, Reason}]),
             exit(node_creation_failed)
     end.
+
 
 %%------------------------------------------------------------------------------------------------
 %% User presence & caps
@@ -494,7 +499,7 @@ caps() ->
 %% Room creation
 %%------------------------------------------------------------------------------------------------
 request_muc_light_room(Client) ->
-    amoc_throttle:send_and_wait(?ROOM_CREATION_THROTTLING, create_room),
+    amoc_throttle:wait(?ROOM_CREATION_THROTTLING),
     Id = ?ROOM_CREATION_ID,
     MucHost = amoc_config:get(muc_host),
     CreateRoomStanza = escalus_stanza:iq_set(?NS_MUC_LIGHT_CREATION, []),
