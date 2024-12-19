@@ -75,7 +75,7 @@ is_first_user_in_domain(UserId) ->
 create_domain(Host, Domain) ->
     {ok, Conn} = gun:open(binary_to_list(Host), cfg(graphql_port)),
     Path = <<"/api/graphql">>,
-    Body = jiffy:encode(#{query => create_domain_mutation(Domain)}),
+    Body = json:encode(#{query => create_domain_mutation(Domain)}),
     Stream = gun:post(Conn, Path, [{<<"content-type">>, <<"application/json">>}], Body),
     {response, nofin, 200, _Headers} = gun:await(Conn, Stream),
     {ok, _Body} = gun:await_body(Conn, Stream),

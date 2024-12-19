@@ -1,15 +1,14 @@
 {application, amoc_arsenal_xmpp,
  [{description, "A library for esl/amoc sceanrios"},
-  {vsn, "git"},
+  {vsn, git},
   {registered, []},
   {applications,
    [kernel,
     stdlib,
-    amoc_arsenal,
-    escalus,
-    mnesia,
     ssl,
-    jiffy
+    mnesia,
+    escalus,
+    amoc_arsenal
    ]},
   {env, [
    {predefined_metrics, [{times, connection},

@@ -6,5 +6,5 @@ set -euo pipefail
 IFS=$'\n\t'
 
 cd "$(git rev-parse --show-toplevel)/ci"
-docker compose --profile with_graphite up --wait --wait-timeout 100 --scale amoc-worker=2
-
+docker compose --profile with_prometheus up --wait \
+       --wait-timeout 100 --scale amoc-worker=2

@@ -29,6 +29,23 @@ function assert_match()
          exit 1; }
 }
 
+function contains()
+{
+  local output="$(cat -)"
+  local ret= acc=0
+  for pattern in "$@"; do
+      ret="$(echo "$output" | grep -q -e "$pattern"; echo "$?")"
+      if [ "$ret" -ne "0" ]; then
+          [ "$(($acc))" -eq "0" ] && {
+              echo "contains FAILED"
+              echo "output: '${output}'"; }
+          echo "pattern is missing: '${pattern}'"
+      fi >&2
+      acc+="+${ret}"
+  done
+  test "$(($acc))" "-eq" "0"
+}
+
 function get_nodes()
 {
   curl -s -X GET "http://localhost:4000/nodes" -H  "accept: application/json" \
@@ -40,13 +57,6 @@ function number_of_nodes()
 {
   curl -s -X GET "http://localhost:4000/nodes" -H  "accept: application/json" \
     | jq '.nodes | length'
-}
-
-function get_graphite_prefix()
-{
-  local node="$1"
-  curl -s -X GET "http://localhost:4000/status/$node" -H  "accept: application/json" \
-    | jq '.env.AMOC_GRAPHITE_PREFIX | ltrimstr("\"") | rtrimstr("\"")' | sed 's/"//g'
 }
 
 function retry()
@@ -62,27 +72,18 @@ function retry()
   echo -e "\nsuccess after '$m' retries";
 }
 
-function are_metrics_reported()
+function metrics_reported()
 {
-  local graphite_prefix="$1"
-  local length="$(curl -s "http://localhost:8080/metrics/find?query=${graphite_prefix}.*" | jq "length")"
-  [ "$length" -gt "0" ]
+  curl -s 'http://localhost:9090/api/v1/targets' | contains "$@"
 }
 
-function wait_for_reported_metrics()
-{
-  local graphite_prefix="$1"
-  retry 60 are_metrics_reported "$graphite_prefix"
+function wait_for_metrics() {
+  retry 60 metrics_reported "$@"
 }
 
 assert_equal "number of nodes" 3 "$(number_of_nodes)"
 
 for node in $(get_nodes); do
   assert_match "node name" "amoc_arsenal_xmpp@.*" "$node"
-  if [ "$node" != "amoc_arsenal_xmpp@amoc-master" ]; then
-    graphite_prefix="$(get_graphite_prefix $node)"
-    wait_for_reported_metrics "$graphite_prefix"
-  else
-    wait_for_reported_metrics "amoc-master"
-  fi
+  wait_for_metrics "amoc-master"
 done
