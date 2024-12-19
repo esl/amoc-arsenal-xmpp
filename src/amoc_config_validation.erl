@@ -1,6 +1,6 @@
 -module(amoc_config_validation).
 
--compile(export_all).
+-compile([export_all, nowarn_export_all]).
 
 %% API
 

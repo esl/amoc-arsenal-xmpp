@@ -6,4 +6,4 @@ set -euo pipefail
 IFS=$'\n\t'
 
 cd "$(git rev-parse --show-toplevel)/ci"
-docker compose --profile with_graphite down
+docker compose --profile with_prometheus down
