@@ -273,10 +273,10 @@ send_presence_with_caps(Client) ->
 
 caps() ->
     #xmlel{name = <<"c">>,
-           attrs = [{<<"xmlns">>, <<"http://jabber.org/protocol/caps">>},
-                    {<<"hash">>, <<"sha-1">>},
-                    {<<"node">>, <<"http://www.chatopus.com">>},
-                    {<<"ver">>, ?CAPS_HASH}]}.
+           attrs = #{<<"xmlns">> => <<"http://jabber.org/protocol/caps">>,
+                     <<"hash">> => <<"sha-1">>,
+                     <<"node">> => <<"http://www.chatopus.com">>,
+                     <<"ver">> => ?CAPS_HASH}}.
 
 %%------------------------------------------------------------------------------------------------
 %% Item publishing
@@ -297,8 +297,8 @@ item_content(PayloadSize) ->
     Payload = #xmlcdata{content = <<<<"A">> || _ <- lists:seq(1, PayloadSize)>>},
     #xmlel{
         name = <<"entry">>,
-        attrs = [{<<"timestamp">>, integer_to_binary(os:system_time(microsecond))},
-                 {<<"jid">>, erlang:get(jid)}],
+        attrs = #{<<"timestamp">> => integer_to_binary(os:system_time(microsecond)),
+                  <<"jid">> => erlang:get(jid)},
         children = [Payload]}.
 
 %%------------------------------------------------------------------------------------------------
@@ -368,15 +368,15 @@ handle_disco_query(Client, DiscoRequest) ->
 feature_elems() ->
     NodeNs = ?PEP_NODE_NS,
     [#xmlel{name = <<"identity">>,
-            attrs = [{<<"category">>, <<"client">>},
-                     {<<"name">>, <<"Psi">>},
-                     {<<"type">>, <<"pc">>}]},
+            attrs = #{<<"category">> => <<"client">>,
+                      <<"name">> => <<"Psi">>,
+                      <<"type">> => <<"pc">>}},
      #xmlel{name = <<"feature">>,
-            attrs = [{<<"var">>, <<"http://jabber.org/protocol/disco#info">>}]},
+            attrs = #{<<"var">> => <<"http://jabber.org/protocol/disco#info">>}},
      #xmlel{name = <<"feature">>,
-            attrs = [{<<"var">>, NodeNs}]},
+            attrs = #{<<"var">> => NodeNs}},
      #xmlel{name = <<"feature">>,
-            attrs = [{<<"var">>, <<NodeNs/bitstring, "+notify">>}]}].
+            attrs = #{<<"var">> => <<NodeNs/bitstring, "+notify">>}}].
 %%------------------------------------------------------------------------------------------------
 %% Stanza helpers
 %%------------------------------------------------------------------------------------------------

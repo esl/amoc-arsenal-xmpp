@@ -111,7 +111,7 @@ publish(Client, ItemId, Node) ->
 
 item_content() ->
     #xmlel{name = <<"entry">>,
-           attrs = [{<<"xmlns">>, <<"http://www.w3.org/2005/Atom">>}]}.
+           attrs = #{<<"xmlns">> => <<"http://www.w3.org/2005/Atom">>}}.
 
 %% item_ids() ->
 %%     [integer_to_binary(I) || I <- lists:seq(1, ?MESSAGES_PER_PUBLISHER)].

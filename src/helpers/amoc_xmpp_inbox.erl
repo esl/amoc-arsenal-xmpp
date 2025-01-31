@@ -26,7 +26,7 @@ init() ->
 lookup(Client) ->
     Req = escalus_stanza:iq(<<"set">>,
                             [#xmlel{name = <<"inbox">>,
-                                    attrs = [{<<"xmlns">>, ns(inbox)}],
+                                    attrs = #{<<"xmlns">> => ns(inbox)},
                                     children = [rsm_max()]}]),
     Pred = fun(Stanza) -> escalus_pred:is_iq_result(Req, Stanza) end,
     Metric = inbox_lookup_response_time,
@@ -37,7 +37,7 @@ lookup(Client) ->
 rsm_max() ->
     Max = cfg(max_items_per_inbox_lookup),
     #xmlel{name = <<"set">>,
-           attrs = [{<<"xmlns">>, ns(rsm)}],
+           attrs = #{<<"xmlns">> => ns(rsm)},
            children = [#xmlel{name = <<"max">>,
                               children = [#xmlcdata{content = integer_to_binary(Max)}]}
                       ]}.

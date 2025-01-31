@@ -490,10 +490,10 @@ send_presence_with_caps(Client) ->
 
 caps() ->
     #xmlel{name = <<"c">>,
-        attrs = [{<<"xmlns">>, <<"http://jabber.org/protocol/caps">>},
-            {<<"hash">>, <<"sha-1">>},
-            {<<"node">>, <<"http://www.chatopus.com">>},
-            {<<"ver">>, ?CAPS_HASH}]}.
+        attrs = #{<<"xmlns">> => <<"http://jabber.org/protocol/caps">>,
+                  <<"hash">> => <<"sha-1">>,
+                  <<"node">> => <<"http://www.chatopus.com">>,
+                  <<"ver">> => ?CAPS_HASH}}.
 
 %%------------------------------------------------------------------------------------------------
 %% Room creation
@@ -516,7 +516,7 @@ add_users_to_room(Client, Jids) ->
     Id = iq_id(affiliation, Client),
     RoomJid = erlang:get(my_room),
     AffList = [#xmlel{name = <<"user">>,
-        attrs = [{<<"affiliation">>, <<"member">>}],
+        attrs = #{<<"affiliation">> => <<"member">>},
         children = [#xmlcdata{content = Jid}]} || Jid <- Jids],
     AffChangeStanza = escalus_stanza:iq_set(?NS_MUC_LIGHT_AFFILIATIONS, AffList),
     AffChangeStanzaWithId = escalus_stanza:set_id(AffChangeStanza, Id),
@@ -534,8 +534,8 @@ send_message_to_room(Client, RoomJid) ->
     PayloadSize = amoc_config:get(publication_size),
     MessageBody = item_content(PayloadSize),
     Message = #xmlel{name = <<"message">>,
-        attrs = [{<<"to">>, RoomJid},
-            {<<"type">>, <<"groupchat">>}],
+        attrs = #{<<"to">> => RoomJid,
+                  <<"type">> => <<"groupchat">>},
         children = [MessageBody]},
     escalus:send(Client, Message).
 
@@ -559,8 +559,8 @@ item_content(PayloadSize) ->
     Payload = #xmlcdata{content = <<<<"A">> || _ <- lists:seq(1, PayloadSize)>>},
     #xmlel{
         name = <<"entry">>,
-        attrs = [{<<"timestamp">>, integer_to_binary(os:system_time(microsecond))},
-            {<<"jid">>, erlang:get(jid)}],
+        attrs = #{<<"timestamp">> => integer_to_binary(os:system_time(microsecond)),
+                  <<"jid">> => erlang:get(jid)},
         children = [Payload]}.
 
 %%------------------------------------------------------------------------------------------------
@@ -596,7 +596,7 @@ process_muc_light_message(Stanza, RecvTimeStamp) ->
     case exml_query:subelement(Stanza, <<"x">>) of
         undefined ->
             handle_normal_muc_light_message(Stanza, RecvTimeStamp);
-        #xmlel{name = <<"x">>, attrs = [{<<"xmlns">>, ?NS_MUC_LIGHT_AFFILIATIONS}], children = _} ->
+        #xmlel{name = <<"x">>, attrs = #{<<"xmlns">> := ?NS_MUC_LIGHT_AFFILIATIONS}, children = _} ->
             handle_muc_light_affiliation_message(Stanza);
         _ -> ?LOG_ERROR("Unknown message.")
     end.
@@ -743,15 +743,15 @@ handle_disco_query(Client, DiscoRequest) ->
 feature_elems() ->
     NodeNs = ?PEP_NODE_NS,
     [#xmlel{name = <<"identity">>,
-        attrs = [{<<"category">>, <<"client">>},
-            {<<"name">>, <<"Psi">>},
-            {<<"type">>, <<"pc">>}]},
+        attrs = #{<<"category">> => <<"client">>,
+                  <<"name">> => <<"Psi">>,
+                  <<"type">> => <<"pc">>}},
         #xmlel{name = <<"feature">>,
-            attrs = [{<<"var">>, <<"http://jabber.org/protocol/disco#info">>}]},
+            attrs = #{<<"var">> => <<"http://jabber.org/protocol/disco#info">>}},
         #xmlel{name = <<"feature">>,
-            attrs = [{<<"var">>, NodeNs}]},
+            attrs = #{<<"var">> => NodeNs}},
         #xmlel{name = <<"feature">>,
-            attrs = [{<<"var">>, <<NodeNs/bitstring, "+notify">>}]}].
+            attrs = #{<<"var">> => <<NodeNs/bitstring, "+notify">>}}].
 
 %%------------------------------------------------------------------------------------------------
 %% Stanza helpers

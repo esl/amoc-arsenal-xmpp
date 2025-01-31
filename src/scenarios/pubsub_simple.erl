@@ -347,8 +347,8 @@ item_content(PayloadSize) ->
     Payload = #xmlcdata{content = <<<<"A">> || _ <- lists:seq(1, PayloadSize)>>},
     #xmlel{
         name = <<"entry">>,
-        attrs = [{<<"timestamp">>, integer_to_binary(os:system_time(microsecond))},
-                 {<<"jid">>, erlang:get(jid)}],
+        attrs = #{<<"timestamp">> => integer_to_binary(os:system_time(microsecond)),
+                  <<"jid">> => erlang:get(jid)},
         children = [Payload]}.
 
 %%------------------------------------------------------------------------------------------------

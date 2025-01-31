@@ -310,18 +310,18 @@ mam_lookup_after_date_xml(Timestamp) ->
     QueryFields =
       [
        field_xml(
-         [{<<"var">>, <<"FORM_TYPE">>},
-          {<<"type">>, <<"hidden">>}],
+         #{<<"var">> => <<"FORM_TYPE">>,
+           <<"type">> => <<"hidden">>},
          [MamVsnValueEl]),
        field_xml(
-         [{<<"var">>, <<"start">>}],
+         #{<<"var">> => <<"start">>},
          [TimeValueEl])
       ],
     #xmlel{name = <<"x">>,
-           attrs = [
-                    {<<"xmlns">>, <<"jabber:x:data">>},
-                    {<<"type">>, <<"submit">>}
-                   ],
+           attrs = #{
+                        <<"xmlns">> => <<"jabber:x:data">>,
+                        <<"type">> => <<"submit">>
+                    },
            children = QueryFields
           }.
 

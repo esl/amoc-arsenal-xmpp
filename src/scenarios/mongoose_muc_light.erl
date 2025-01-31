@@ -166,7 +166,7 @@ stanza_create_room(RoomId, MemberJids) ->
 
 user_element(Jid, Aff) ->
     #xmlel{name = <<"user">>,
-           attrs = [{<<"affiliation">>, Aff}],
+           attrs = #{<<"affiliation">> => Aff},
            children = [#xmlcdata{content = Jid}]}.
 
 kv_el(K, V) ->
