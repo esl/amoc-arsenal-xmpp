@@ -1,20 +1,24 @@
-ARG otp_vsn=25.3
-FROM erlang:${otp_vsn}
-MAINTAINER Erlang Solutions <mongoose-im@erlang-solutions.com>
+ARG otp_vsn=27.1
+FROM erlang:${otp_vsn} AS builder
+LABEL org.label-schema.name='AMOC Arsenal' \
+      org.label-schema.vendor='Erlang Solutions'
 
 WORKDIR /amoc_arsenal_xmpp
-COPY ./ ./
 
-## build only what is commited
-RUN git clean -ffxd
-RUN git restore -WS .
+COPY rebar.lock .
+RUN rebar3 compile --deps_only
 
+COPY rebar.config .
+COPY rel rel
+COPY src src
+RUN rebar3 compile
+
+CMD ["amoc_arsenal_xmpp", "console", "-noshell", "-noinput", "+Bd"]
+
+FROM builder AS dev
 RUN rebar3 release
+ENV PATH="/amoc_arsenal_xmpp/_build/default/rel/amoc_arsenal_xmpp/bin:${PATH}"
 
-ENV PATH "/amoc_arsenal_xmpp/_build/default/rel/amoc_arsenal_xmpp/bin:${PATH}"
-
-COPY --chmod=500 <<-EOF /start_amoc.sh
-	amoc_arsenal_xmpp console -noshell -noinput +Bd
-EOF
-
-CMD ["sh", "/start_amoc.sh"]
+FROM builder AS prod
+RUN rebar3 as prod release
+ENV PATH="/amoc_arsenal_xmpp/_build/prod/rel/amoc_arsenal_xmpp/bin:${PATH}"

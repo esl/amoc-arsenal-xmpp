@@ -1,55 +1,38 @@
-###############################################################################
-## you may need to build 'amoc-arsenal-xmpp' docker image, before running:   ##
-##                                                                           ##
-##     docker-compose up -d --scale amoc-worker=2                            ##
-##                                                                           ##
-## it can be done using this command:                                        ##
-##                                                                           ##
-##     docker build . -t amoc-arsenal-xmpp                                   ##
-##                                                                           ##
-## alternatively, a custom amoc image can be provided by setting AMOC_IMAGE  ##
-## environment variable:                                                     ##
-##                                                                           ##
-##     AMOC_IMAGE=mongooseim/amoc-arsenal-xmpp docker-compose up -d          ##
-##                                                                           ##
-###############################################################################
-version: "3.3"
 services:
+
   amoc-master:
     hostname: "amoc-master"
     image: "${AMOC_IMAGE:-amoc-arsenal-xmpp}"
+    pull_policy: never
+    environment:
+      AMOC_PROMETHEUS_IP: '{0, 0, 0, 0}'
     ports:
       - "4000:4000"
-    networks:
-      - amoc-test-network
-    environment:
-      AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
     healthcheck:
       test: "amoc_arsenal_xmpp status"
+
   amoc-worker:
     image: "${AMOC_IMAGE:-amoc-arsenal-xmpp}"
-    networks:
-      - amoc-test-network
+    pull_policy: never
     ulimits: ## ensure that we can use all the ephemeral ports
       nofile:
         soft: 66000
         hard: 66000
     environment:
-      AMOC_GRAPHITE_HOST: '"${GRAPHITE_HOST:-host.docker.internal}"'
       AMOC_NODES: "['amoc_arsenal_xmpp@amoc-master']"
       AMOC_XMPP_SERVERS: '[[{host, <<"host.docker.internal">>}]]'
-    entrypoint: [ "sh", "-c", 'AMOC_GRAPHITE_PREFIX="\"amoc-worker.$$HOSTNAME\"" /start_amoc.sh']
+      AMOC_PROMETHEUS_IP: '{0, 0, 0, 0}'
     deploy:
       mode: replicated
       replicas: 6
     healthcheck:
       test: "amoc_arsenal_xmpp status"
-  graphite:
-    image: "graphiteapp/graphite-statsd:1.1.10-4"
+
+  prometheus:
+    image: "prom/prometheus"
     ports:
-      - "8080:80"
-      - "2003:2003"
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     profiles:
-      - with_graphite
-networks:
-  amoc-test-network:
+      - with_prometheus

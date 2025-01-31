@@ -62,11 +62,10 @@ log_message(_Client, Stanza) ->
 
 send_message(AuthHeader, Id) ->
     Msg = #{to => amoc_xmpp_users:make_jid(Id),
-            body => <<"Hello, It's me">>
-           },
-    Headers = [AuthHeader,
-               {<<"content-type">>, <<"application/json">>}],
-    R = http_req:post_request("https://localhost:8089", <<"/api/messages">>, Headers, jiffy:encode(Msg)),
+            body => <<"Hello, It's me">>},
+    Headers = [AuthHeader, {<<"content-type">>, <<"application/json">>}],
+    Host = "https://localhost:8089",
+    R = http_req:post_request(Host, <<"/api/messages">>, Headers, json:encode(Msg)),
     ?LOG_WARNING("~p", [R]).
 
 auth_header(Id) ->
