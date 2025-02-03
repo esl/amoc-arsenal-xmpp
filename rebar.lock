@@ -14,7 +14,7 @@
  {<<"cowlib">>,{pkg,<<"cowlib">>,<<"2.13.0">>},1},
  {<<"docsh">>,{pkg,<<"docsh">>,<<"0.7.2">>},1},
  {<<"escalus">>,{pkg,<<"escalus">>,<<"4.4.0">>},0},
- {<<"exml">>,{pkg,<<"hexml">>,<<"4.0.0">>},1},
+ {<<"exml">>,{pkg,<<"hexml">>,<<"4.0.0">>},0},
  {<<"exometer_core">>,
   {git,"https://github.com/esl/exometer_core.git",
        {ref,"123daa053a4abb3ff4bdbf52f08344da535294e9"}},
