@@ -165,5 +165,5 @@ measure_sent_messages() ->
 
 -spec ttd(exml_stream:element(), escalus_connection:metadata()) -> integer().
 ttd(#xmlel{attrs = Attrs}, #{recv_timestamp := RecvTimestamp}) ->
-    {_, SentBin} = lists:keyfind(<<"timestamp">>, 1, Attrs),
+    SentBin = maps:get(<<"timestamp">>, Attrs),
     RecvTimestamp - binary_to_integer(SentBin).

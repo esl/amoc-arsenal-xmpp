@@ -41,13 +41,13 @@ lookup(Client, Opts) ->
 mam_request(Opts) ->
     Max = cfg(max_items_per_lookup),
     SetChild = #xmlel{name = <<"set">>,
-                      attrs = [{<<"xmlns">>, <<"http://jabber.org/protocol/rsm">>}],
+                      attrs = #{<<"xmlns">> => <<"http://jabber.org/protocol/rsm">>},
                       children = [#xmlel{name = <<"max">>,
                                          children = [#xmlcdata{content = integer_to_binary(Max)}]}
                                  | after_elements(Opts)]},
     Req = escalus_stanza:iq(<<"set">>,
                             [#xmlel{name = <<"query">>,
-                                    attrs = [{<<"xmlns">>,  <<"urn:xmpp:mam:2">>}],
+                                    attrs = #{<<"xmlns">> => <<"urn:xmpp:mam:2">>},
                                     children = [SetChild]}]),
     case Opts of
         #{jid := Jid} -> escalus_stanza:to(Req, Jid);
