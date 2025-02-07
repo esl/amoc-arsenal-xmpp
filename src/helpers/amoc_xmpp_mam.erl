@@ -20,7 +20,6 @@
 
 -spec init() -> ok.
 init() ->
-    amoc_xmpp_presence:init(),
     amoc_metrics:init(counters, mam_lookups),
     amoc_metrics:init(counters, mam_messages_received),
     amoc_metrics:init(counters, timeouts),
