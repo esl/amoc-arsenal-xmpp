@@ -67,12 +67,12 @@ maybe_use_legacy_tls(Spec) ->
 %% @doc Picks a random server based on the config var `xmpp_servers'.
 %% This function expects a list of proplists defining the endpoint
 %% to which an XMPP client can connect, for instance:
-%% [[{host, "127.0.0.1"}, {port, 5222}], [{host, "127.0.0.1"}, {port, 5223}]]
+%% [[{host, <<"127.0.0.1">>}, {port, 5222}], [{host, <<"127.0.0.1">>}, {port, 5223}]]
 %% One of the above proplists is picked and can be added to user's spec.
 %% It's required that the proplists contains at least the `host' property.
 %% Since the `xmpp_servers' config option is read via `amoc_config' API,
 %% it's possible to pass it as an ENV var when starting amoc:
-%% ```> AMOC_xmpp_servers="[[{host,\"127.0.0.2\"}, {port, 5222}],[{host, \"127.0.0.1\"}, {port, 5223}]]" make console'''
+%% ```> AMOC_XMPP_SERVERS="[[{host,<<\"127.0.0.2\">>}, {port, 5222}],[{host, <<\"127.0.0.1\">>}, {port, 5223}]]" rebar3 shell'''
 -spec pick_server([[proplists:property()]]) -> [proplists:property()].
 pick_server(DefaultServers) ->
     Servers = amoc_config:get(xmpp_servers, DefaultServers),
