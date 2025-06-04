@@ -24,7 +24,7 @@
       description => "Number of users each room has"}
    ]).
 
--spec init() -> ok.
+-spec init() -> boolean().
 init() ->
     amoc_metrics:init(counters, muc_rooms_created),
     amoc_metrics:init(times, room_creation_response_time).

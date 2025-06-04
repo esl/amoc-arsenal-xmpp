@@ -5,7 +5,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-export otp_vsn="${OTP_RELEASE:-27.1}"
+export otp_vsn="${OTP_RELEASE:-27.3}"
 echo "ERLANG/OTP ${otp_vsn}"
 
 docker buildx build --platform linux/amd64,linux/arm64 \

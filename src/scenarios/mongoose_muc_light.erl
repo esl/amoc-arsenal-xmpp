@@ -88,7 +88,7 @@ init() ->
     amoc_metrics:init(times, muc_message_ttd),
     ok.
 
--spec start(amoc_scenario:user_id()) -> any().
+-spec start(amoc_scenario:user_id()) -> no_return().
 start(Id) ->
     {ok, Client, _Spec} = amoc_xmpp:connect_or_exit(Id, extra_user_spec()),
     send_presence_available(Client),
