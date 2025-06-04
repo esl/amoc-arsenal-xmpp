@@ -13,8 +13,8 @@ jobs:
     name: OTP ${{matrix.otp_vsn}}
     strategy:
       matrix:
-        otp_vsn: ['27']
-        rebar_vsn: ['3.24.0']
+        otp_vsn: ['28', '27']
+        rebar_vsn: ['3.25']
     runs-on: 'ubuntu-24.04'
     steps:
       - uses: actions/checkout@v4
@@ -33,8 +33,8 @@ jobs:
     name: docker container test with OTP ${{matrix.otp_vsn}}
     strategy:
       matrix:
-        otp_vsn: ['27']
-        rebar_vsn: ['3.24.0']
+        otp_vsn: ['28', '27']
+        rebar_vsn: ['3.25']
     runs-on: 'ubuntu-24.04'
     env:
       OTP_RELEASE: ${{ matrix.otp_vsn }}
@@ -57,7 +57,7 @@ jobs:
       - integration_test
     if: github.ref == 'refs/heads/master'
     env:
-      OTP_RELEASE: 27.1
+      OTP_RELEASE: 27.3
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
