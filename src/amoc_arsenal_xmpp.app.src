@@ -14,7 +14,8 @@
    {predefined_metrics, [{times, connection},
                          {counters, connections},
                          {counters, connection_retries},
-                         {counters, connection_failures}]}
+                         {counters, connection_failures},
+                         {gauge, amoc_users_size}]}
   ]},
   {modules, []},
 
