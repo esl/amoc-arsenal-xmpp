@@ -82,7 +82,7 @@ start(MyId) ->
 
     escalus_connection:wait(Client, ?SLEEP_TIME_AFTER_SCENARIO),
     escalus_session:send_presence_unavailable(Client),
-    escalus_connection:stop(Client).
+    amoc_xmpp:stop_connection(Client).
 
 -spec do(amoc_scenario:user_id(), escalus:client()) -> any().
 do(MyId, Client) ->

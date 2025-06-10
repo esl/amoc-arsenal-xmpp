@@ -54,7 +54,7 @@ do_start(xmpp, MyId) ->
 
     escalus_connection:wait_forever(Client),
 
-    escalus_connection:stop(Client).
+    amoc_xmpp:stop_connection(Client).
 
 log_message(_Client, Stanza) ->
     ?LOG_WARNING("~p", [Stanza]),

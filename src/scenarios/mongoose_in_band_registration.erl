@@ -45,6 +45,7 @@ start(MyId) ->
     maybe_register(Cfg),
 
     {ok, Client, _} = escalus_connection:start(Cfg),
+    amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
 
     %%Allow presence stanza only
     AllowPresence = fun escalus_pred:is_presence/1,
@@ -63,7 +64,7 @@ start(MyId) ->
 
     timer:sleep(10000),
     escalus_session:send_presence_unavailable(Client),
-    escalus_connection:stop(Client).
+    amoc_xmpp:stop_connection(Client).
 
 -spec maybe_register(escalus_users:user_spec()) -> ok | already_registered.
 maybe_register(Cfg) ->

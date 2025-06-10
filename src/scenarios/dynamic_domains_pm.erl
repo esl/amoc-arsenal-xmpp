@@ -45,7 +45,7 @@ start(MyId) ->
     {ok, Client, _} = dynamic_domains:connect_or_exit(MyId, Spec),
     amoc_xmpp_presence:start(Client),
     do(MyId, Client),
-    amoc_xmpp_presence:stop(Client).
+    amoc_xmpp:stop_presence_connection(Client).
 
 -record(state, {neighbours :: [amoc_scenario:user_id()]}).
 

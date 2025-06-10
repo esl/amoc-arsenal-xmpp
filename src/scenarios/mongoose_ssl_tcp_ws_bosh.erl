@@ -44,7 +44,7 @@ start(MyId) ->
 
     timer:sleep(10*1000),
     escalus_session:send_presence_unavailable(Client),
-    escalus_connection:stop(Client).
+    amoc_xmpp:stop_connection(Client).
 
 -spec send_messages_many_times(escalus:client(), timeout(), [amoc_scenario:user_id()]) -> ok.
 send_messages_many_times(Client, MessageInterval, NeighbourIds) ->
