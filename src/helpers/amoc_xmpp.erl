@@ -6,6 +6,8 @@
 -export([make_user/2]).
 -export([send_request_and_get_response/5]).
 -export([bucket_neighbours/2]).
+-export([stop_connection/1]).
+-export([stop_presence_connection/1]).
 
 -include_lib("kernel/include/logger.hrl").
 -define(V(X), (fun amoc_config_validation:X/1)).
@@ -36,7 +38,9 @@ connect_or_exit(Id, ExtraSpec) ->
 connect_or_exit(Spec) ->
     NewSpec = maybe_use_legacy_tls(Spec),
     N = amoc_config:get(connection_attempts),
-    try_to_connect_n_times_or_exit(NewSpec, N).
+    Res = try_to_connect_n_times_or_exit(NewSpec, N),
+    amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
+    Res.
 
 try_to_connect_n_times_or_exit(Spec, N) when N>0 ->
     {ConnectionTime, ConnectionResult} = timer:tc(escalus_connection, start, [Spec]),
@@ -134,3 +138,13 @@ bucket_neighbours(Id, BucketSize) ->
     PositionInBucket = (Id - 1) rem BucketSize,
     BucketStartId = Id - PositionInBucket,
     lists:delete(Id, lists:seq(BucketStartId, BucketStartId + BucketSize - 1)).
+
+-spec stop_connection(escalus:client()) -> any().
+stop_connection(Client) ->
+    amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
+    escalus_connection:stop(Client).
+
+-spec stop_presence_connection(escalus:client()) -> any().
+stop_presence_connection(Client) ->
+    amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
+    amoc_xmpp_presence:stop(Client).
