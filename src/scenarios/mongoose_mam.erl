@@ -126,7 +126,7 @@ start(MyId) ->
 
     timer:sleep(?SLEEP_TIME_AFTER_SCENARIO),
     escalus_session:send_presence_unavailable(Client),
-    escalus_connection:stop(Client),
+    amoc_xmpp:stop_connection(Client),
     ok.
 
 session_indicator(MyId, MAMReader) when MyId rem MAMReader == 0 ->

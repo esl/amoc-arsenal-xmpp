@@ -362,8 +362,10 @@ user_loop(Client, Requests) ->
             process_presence(Client, Stanza),
             user_loop(Client, Requests);
         {'DOWN', _, process, Pid, Info} when Pid =:= Client#client.rcv_pid ->
+            amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
             ?LOG_ERROR("TCP connection process ~p down: ~p", [Pid, Info]);
         Msg ->
+            amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
             ?LOG_ERROR("unexpected message ~p", [Msg])
     after IqTimeout ->
         user_loop(Client, verify_request(Requests))
@@ -408,6 +410,7 @@ remove_self(Client) ->
 
     amoc_metrics:update_counter(gdpr_removal),
     amoc_metrics:update_time(gdpr_removal, RemovalTime),
+    amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
     % Suppresses errors from escalus, unlike just jumping out of loop
     throw(stop).
 
@@ -417,6 +420,7 @@ remove_self(Client) ->
 connect_amoc_user(Id) ->
     Cfg = make_user_cfg(Id),
     {ok, Client, _} = escalus_connection:start(Cfg),
+    amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
     erlang:put(jid, Client#client.jid),
     Client.
 

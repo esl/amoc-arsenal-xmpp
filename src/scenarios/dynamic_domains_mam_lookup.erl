@@ -45,7 +45,7 @@ start(MyId) ->
     {ok, Client, _} = dynamic_domains:connect_or_exit(MyId, Spec, #{create_domain => false}),
     amoc_xmpp_presence:start(Client),
     do(MyId, Client),
-    amoc_xmpp_presence:stop(Client).
+    amoc_xmpp:stop_presence_connection(Client).
 
 -record(state, {last_mam_id = none :: amoc_xmpp_mam:last_id()}).
 

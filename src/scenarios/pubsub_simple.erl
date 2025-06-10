@@ -232,8 +232,10 @@ user_loop(Client, Node, Requests) ->
             amoc_metrics:update_counter(publication_query, 1),
             user_loop(Client, Node, Requests#{Id=>{new, TS}});
         {'DOWN', _, process, Pid, Info} when Pid =:= Client#client.rcv_pid ->
+            amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
             ?LOG_ERROR("TCP connection process ~p down: ~p", [Pid, Info]);
         Msg ->
+            amoc_metrics:update_gauge(amoc_users_size, amoc_users_sup:count_no_of_users()),
             ?LOG_ERROR("unexpected message ~p", [Msg])
     after IqTimeout ->
         user_loop(Client, Node, verify_request(Requests))
