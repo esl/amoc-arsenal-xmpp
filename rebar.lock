@@ -3,7 +3,7 @@
  {<<"amoc">>,{pkg,<<"amoc">>,<<"4.0.0">>},1},
  {<<"amoc_arsenal">>,
   {git,"https://github.com/esl/amoc-arsenal.git",
-       {ref,"13c7160ee238dea1152da28501f3d21297f62160"}},
+       {ref,"851081cdf98659c254ff17f402f83cb12d3a9f51"}},
   0},
  {<<"amoc_rest">>,
   {git,"https://github.com/esl/amoc_rest.git",
