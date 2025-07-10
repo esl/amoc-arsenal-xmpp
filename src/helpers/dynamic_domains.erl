@@ -9,8 +9,6 @@
 
 -define(V(X), (fun amoc_config_validation:X/1)).
 
--include_lib("stdlib/include/assert.hrl").
-
 -required_variable(
    [#{name => domain_count, default_value => 10000, verification => ?V(positive_integer),
       description => "Number of dynamic domains"},

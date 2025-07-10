@@ -9,7 +9,6 @@
 -module(dynamic_domains_muc_light).
 
 -include_lib("kernel/include/logger.hrl").
--include_lib("exml/include/exml.hrl").
 
 -define(V(X), (fun amoc_config_validation:X/1)).
 
@@ -39,12 +38,8 @@ init() ->
     ?LOG_INFO("init metrics"),
     dynamic_domains:init(),
     amoc_xmpp_presence:init(),
-    amoc_metrics:init(counters, muc_rooms_created),
-    amoc_metrics:init(counters, muc_occupants),
-    amoc_metrics:init(counters, muc_messages_sent),
-    amoc_metrics:init(counters, muc_messages_received),
-    amoc_metrics:init(counters, muc_notifications_received),
-    amoc_metrics:init(times, room_creation_response_time),
+    amoc_xmpp_ping:init(),
+    amoc_xmpp_muc:init(),
     amoc_metrics:init(times, message_ttd),
     ok.
 
@@ -86,7 +81,7 @@ message_timetable(MyId, RoomIdsToSend) ->
 -spec room_message_timetable(amoc_scenario:user_id(), pos_integer()) ->
           timetable:timetable(groupchat_event()).
 room_message_timetable(MyId, RoomId) ->
-    RoomJid = room_jid(RoomId, dynamic_domains:domain_name(MyId)),
+    RoomJid = room_jid(RoomId, MyId),
     timetable:new({groupchat, RoomJid},
                   cfg(messages_sent_per_room), cfg(room_message_interval)).
 
@@ -94,7 +89,7 @@ room_message_timetable(MyId, RoomId) ->
 
 -spec create_room(escalus:client(), amoc_scenario:user_id(), pos_integer()) -> ok.
 create_room(Client, MyId, RoomId) ->
-    RoomJid = room_jid(RoomId, dynamic_domains:domain_name(MyId)),
+    RoomJid = room_jid(RoomId, MyId),
     MemberIds = amoc_xmpp_muc:room_members(MyId),
     MemberJids = [make_jid(MemberId) || MemberId <- MemberIds],
     amoc_xmpp_muc:create_muc_light_room(Client, room_name(RoomId), RoomJid, MemberJids).
@@ -103,27 +98,13 @@ create_room(Client, MyId, RoomId) ->
 
 -spec send_stanza(escalus:client(), groupchat_event()) -> ok.
 send_stanza(Client, {groupchat, RoomJid}) ->
-    escalus_connection:send(Client, message_to_room(RoomJid)).
+    amoc_xmpp_muc:send_message_to_room(Client, RoomJid).
 
-message_to_room(RoomJid) ->
-    Timestamp = integer_to_binary(os:system_time(microsecond)),
-    escalus_stanza:groupchat_to(RoomJid, Timestamp).
-
-room_jid(RoomId, Domain) ->
-    <<(room_name(RoomId))/binary, $@, (muc_host(Domain))/binary>>.
+room_jid(RoomId, MyId) ->
+    amoc_xmpp_muc:muc_light_room_jid(RoomId, dynamic_domains:domain_name(MyId)).
 
 room_name(RoomId) ->
     <<"room_", (integer_to_binary(RoomId))/binary>>.
-
-muc_host(Domain) ->
-    <<"muclight.", Domain/binary>>.
-
-ns(muc_light_affiliations) -> <<"urn:xmpp:muclight:0#affiliations">>;
-ns(muc_light_configuration) -> <<"urn:xmpp:muclight:0#configuration">>.
-
-ttd(Stanza, #{recv_timestamp := Recv}) ->
-    SentBin = exml_query:path(Stanza, [{element, <<"body">>}, cdata]),
-    Recv - binary_to_integer(SentBin).
 
 %% User helpers
 
@@ -133,31 +114,17 @@ make_jid(Id) ->
 
 %% Stanza handlers
 
+-spec sent_handler_spec() -> [amoc_xmpp_handlers:handler_spec()].
 sent_handler_spec() ->
-    [{fun is_muc_message/1,
-      fun() -> amoc_metrics:update_counter(muc_messages_sent) end} |
-     amoc_xmpp_presence:sent_handler_spec()].
+    amoc_xmpp_muc:sent_handler_spec() ++
+        amoc_xmpp_presence:sent_handler_spec() ++
+        amoc_xmpp_ping:sent_handler_spec().
 
+-spec received_handler_spec() -> [amoc_xmpp_handlers:handler_spec()].
 received_handler_spec() ->
-    [{fun is_muc_notification/1,
-      fun() -> amoc_metrics:update_counter(muc_notifications_received) end},
-     {fun is_muc_message/1,
-      fun(_, Stanza, Metadata) ->
-              amoc_metrics:update_counter(muc_messages_received),
-              amoc_metrics:update_time(message_ttd, ttd(Stanza, Metadata))
-      end} |
-     amoc_xmpp_presence:received_handler_spec()].
-
-is_muc_notification(Message = #xmlel{name = <<"message">>}) ->
-    exml_query:attr(Message, <<"type">>) =:= <<"groupchat">>
-        andalso lists:member(exml_query:path(Message, [{element, <<"x">>}, {attr, <<"xmlns">>}]),
-                             [ns(muc_light_affiliations),
-                              ns(muc_light_configuration)]);
-is_muc_notification(_) -> false.
-
-is_muc_message(Stanza = #xmlel{name = <<"message">>}) ->
-    exml_query:attr(Stanza, <<"type">>) =:= <<"groupchat">>;
-is_muc_message(_) -> false.
+    amoc_xmpp_muc:received_handler_spec() ++
+        amoc_xmpp_presence:received_handler_spec() ++
+        amoc_xmpp_ping:received_handler_spec().
 
 %% Config helpers
 
