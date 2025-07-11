@@ -65,13 +65,19 @@ send_presence_unavailable(Client) ->
 
 -spec sent_handler_spec() -> [amoc_xmpp_handlers:handler_spec()].
 sent_handler_spec() ->
-    [{fun escalus_pred:is_presence/1,
+    [{fun is_presence_without_error/1,
       fun() -> amoc_metrics:update_counter(presences_sent) end}].
 
 -spec received_handler_spec() -> [amoc_xmpp_handlers:handler_spec()].
 received_handler_spec() ->
-    [{fun escalus_pred:is_presence/1,
+    [{fun is_presence_without_error/1,
       fun() -> amoc_metrics:update_counter(presences_received) end}].
+
+%% Predicates
+
+-spec is_presence_without_error(exmle:element()) -> boolean().
+is_presence_without_error(Stanza) ->
+    escalus_pred:is_presence(Stanza) andalso exml_query:attr(Stanza, <<"type">>) =/= <<"error">>.
 
 %% Config helpers
 
