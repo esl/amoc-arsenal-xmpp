@@ -33,6 +33,7 @@ init() ->
     ?LOG_INFO("init metrics"),
     dynamic_domains:init(),
     amoc_xmpp_presence:init(),
+    amoc_xmpp_ping:init(),
     amoc_metrics:init(counters, messages_sent),
     amoc_metrics:init(counters, messages_received),
     amoc_metrics:init(counters, service_unavailable),
@@ -75,12 +76,12 @@ make_jid(Id) ->
 
 sent_handler_spec() ->
     [{fun escalus_pred:is_chat_message/1, fun amoc_xmpp_handlers:measure_sent_messages/0} |
-     amoc_xmpp_presence:sent_handler_spec()].
+     amoc_xmpp_presence:sent_handler_spec() ++ amoc_xmpp_ping:sent_handler_spec()].
 
 received_handler_spec() ->
     [{fun escalus_pred:is_chat_message/1, fun handle_chat_message/3},
      {fun is_service_unavailable/1, fun handle_service_unavailable/0} |
-     amoc_xmpp_presence:received_handler_spec()].
+     amoc_xmpp_presence:received_handler_spec() ++ amoc_xmpp_ping:received_handler_spec()].
 
 handle_chat_message(Client, Stanza, Metadata) ->
     amoc_metrics:update_counter(messages_received),
