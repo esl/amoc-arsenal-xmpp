@@ -20,6 +20,12 @@
       description => "Port number of the GraphQL API for dynamic domains"},
     #{name => graphql_host, verification => ?V(binary_or_undefined),
       description => "Host name of the GraphQL API for dynamic domains"},
+    #{name => graphql_user, verification => ?V(binary_or_undefined),
+      description => "Optional user name for the GraphQL API"},
+    #{name => graphql_password, verification => ?V(binary_or_undefined),
+      description => "Optional password for the GraphQL API"},
+    #{name => graphql_tls, default_value => false, verification => ?V(boolean),
+      description => "Enables TLS for the GraphQL API"},
     #{name => host_type, default_value => <<"localhost">>, verification => ?V(binary),
       description => "Host type for the created domains"},
     #{name => wait_time_for_domain_creation, default_value => 60,
@@ -73,13 +79,31 @@ is_first_user_in_domain(UserId) ->
 
 -spec create_domain(binary(), binary()) -> ok.
 create_domain(Host, Domain) ->
-    {ok, Conn} = gun:open(binary_to_list(Host), cfg(graphql_port)),
+    {ok, Conn} = gun:open(binary_to_list(Host), cfg(graphql_port), gun_opts()),
     Path = <<"/api/graphql">>,
     Body = json:encode(#{query => create_domain_mutation(Domain)}),
-    Stream = gun:post(Conn, Path, [{<<"content-type">>, <<"application/json">>}], Body),
+    Headers = [{<<"content-type">>, <<"application/json">>} |
+               auth_headers(cfg(graphql_user), cfg(graphql_password))],
+    Stream = gun:post(Conn, Path, Headers, Body),
     {response, nofin, 200, _Headers} = gun:await(Conn, Stream),
-    {ok, _Body} = gun:await_body(Conn, Stream),
-    gun:close(Conn).
+    {ok, ResponseBody} = gun:await_body(Conn, Stream),
+    gun:close(Conn),
+    check_response(Domain, json:decode(ResponseBody)).
+
+check_response(Domain, #{<<"data">> := #{<<"domain">> := #{<<"addDomain">> :=
+                                                             #{<<"domain">> := Domain}}}}) ->
+    ok;
+check_response(Domain, #{<<"errors">> := [#{<<"extensions">> := #{<<"code">> := <<"duplicate">>,
+                                                                  <<"domain">> := Domain}}]}) ->
+    ok.
+
+auth_headers(undefined, undefined) ->
+    [];
+auth_headers(User, Password) when is_binary(User), is_binary(Password) ->
+    Base64 = base64:encode(<<User/binary, $:, Password/binary>>),
+    [{<<"authorization">>, <<"basic ", Base64/binary>>}];
+auth_headers(User, Password) ->
+    error(invalid_graphql_credentials, [User, Password]).
 
 create_domain_mutation(Domain) ->
     <<"mutation {domain {addDomain(domain: \"", Domain/binary,
@@ -103,6 +127,14 @@ get_rest_api_host() ->
             proplists:get_value(host, amoc_xmpp:pick_server([]));
         Binary ->
             Binary
+    end.
+
+gun_opts() ->
+    case cfg(graphql_tls) of
+        true ->
+            #{transport => tls};
+        false ->
+            #{}
     end.
 
 cfg(Name) ->
