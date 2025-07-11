@@ -34,6 +34,7 @@ init() ->
     ?LOG_INFO("init metrics"),
     dynamic_domains:init(),
     amoc_xmpp_presence:init(),
+    amoc_xmpp_ping:init(),
     amoc_xmpp_mam:init(),
     ok.
 
@@ -62,10 +63,11 @@ send_stanza(Client, mam_lookup, State = #state{last_mam_id = Id}) ->
 %% Stanza handlers
 
 sent_handler_spec() ->
-    amoc_xmpp_presence:sent_handler_spec().
+    amoc_xmpp_presence:sent_handler_spec() ++ amoc_xmpp_ping:sent_handler_spec().
 
 received_handler_spec() ->
-    amoc_xmpp_mam:received_handler_spec(chat) ++ amoc_xmpp_presence:received_handler_spec().
+    amoc_xmpp_mam:received_handler_spec(chat) ++ amoc_xmpp_presence:received_handler_spec() ++
+        amoc_xmpp_ping:received_handler_spec().
 
 %% Config helpers
 

@@ -39,6 +39,7 @@ init() ->
     ?LOG_INFO("init metrics"),
     dynamic_domains:init(),
     amoc_xmpp_presence:init(),
+    amoc_xmpp_ping:init(),
     amoc_metrics:init(counters, muc_rooms_created),
     amoc_metrics:init(counters, muc_occupants),
     amoc_metrics:init(counters, muc_messages_sent),
@@ -136,7 +137,7 @@ make_jid(Id) ->
 sent_handler_spec() ->
     [{fun is_muc_message/1,
       fun() -> amoc_metrics:update_counter(muc_messages_sent) end} |
-     amoc_xmpp_presence:sent_handler_spec()].
+     amoc_xmpp_presence:sent_handler_spec() ++ amoc_xmpp_ping:sent_handler_spec()].
 
 received_handler_spec() ->
     [{fun is_muc_notification/1,
@@ -146,7 +147,7 @@ received_handler_spec() ->
               amoc_metrics:update_counter(muc_messages_received),
               amoc_metrics:update_time(message_ttd, ttd(Stanza, Metadata))
       end} |
-     amoc_xmpp_presence:received_handler_spec()].
+     amoc_xmpp_presence:received_handler_spec() ++ amoc_xmpp_ping:received_handler_spec()].
 
 is_muc_notification(Message = #xmlel{name = <<"message">>}) ->
     exml_query:attr(Message, <<"type">>) =:= <<"groupchat">>

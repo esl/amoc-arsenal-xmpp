@@ -75,7 +75,7 @@ received_handler_spec() ->
 
 %% Predicates
 
--spec is_presence_without_error(exmle:element()) -> boolean().
+-spec is_presence_without_error(exml:element()) -> boolean().
 is_presence_without_error(Stanza) ->
     escalus_pred:is_presence(Stanza) andalso exml_query:attr(Stanza, <<"type">>) =/= <<"error">>.
 
