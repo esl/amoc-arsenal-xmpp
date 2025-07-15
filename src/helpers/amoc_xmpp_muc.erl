@@ -1,47 +1,126 @@
+%%% @doc Building blocks for groupchat scenarios (MUC or MUC Light).
+
 -module(amoc_xmpp_muc).
 
+-include_lib("escalus/include/escalus_xmlns.hrl").
 -include_lib("exml/include/exml.hrl").
+-include_lib("kernel/include/logger.hrl").
 
-%% API
-
+%%% Common API
 -export([init/0,
-         create_muc_light_room/4,
-         rooms_to_join/1, rooms_to_join/3,
+         sent_handler_spec/0,
+         received_handler_spec/0,
+         send_message_to_room/2]).
+
+%%% MUC Light API
+-export([create_muc_light_room/4,
          rooms_to_create/1, rooms_to_create/3,
-         room_members/1, room_members/2]).
+         room_members/1, room_members/2,
+         muc_light_room_jid/2]).
 
-%% Debug API
+%%% MUC API
+-export([enter_muc_room/2,
+         rooms_to_join/1, rooms_to_join/3,
+         muc_room_jid/2]).
 
+%%% Debug API
 -export([print_rooms_to_join/3,
          print_rooms_to_create/3]).
 
 -define(V(X), (fun amoc_config_validation:X/1)).
 
+-type room_id() :: pos_integer().
+-export_type([room_id/0]).
+
 -required_variable(
    [#{name => rooms_per_user, default_value => 10, verification => ?V(nonnegative_integer),
       description => "Number of rooms each user belongs to"},
     #{name => users_per_room, default_value => 5, verification => ?V(nonnegative_integer),
-      description => "Number of users each room has"}
+      description => "Number of users each room has"},
+    #{name => muc_light_prefix, default_value => <<"muclight">>, verification => ?V(binary),
+      description => "Subdomain prefix for MUC Light"},
+    #{name => muc_prefix, default_value => <<"conference">>, verification => ?V(binary),
+      description => "Subdomain prefix for MUC"}
    ]).
 
--spec init() -> boolean().
+-spec init() -> ok.
 init() ->
     amoc_metrics:init(counters, muc_rooms_created),
-    amoc_metrics:init(times, room_creation_response_time).
+    amoc_metrics:init(counters, muc_occupants),
+    amoc_metrics:init(counters, muc_messages_sent),
+    amoc_metrics:init(counters, muc_messages_received),
+    amoc_metrics:init(counters, muc_presences_received),
+    amoc_metrics:init(counters, muc_notifications_received),
+    amoc_metrics:init(counters, timeouts),
+    amoc_metrics:init(times, message_ttd),
+    amoc_metrics:init(times, response),
+    ok.
 
-%% Room creation
+-spec sent_handler_spec() -> [amoc_xmpp_handlers:handler_spec()].
+sent_handler_spec() ->
+    [{fun is_muc_message/1,
+      fun(Client, Stanza) ->
+              ?LOG_DEBUG("~s sent MUC message ~p", [escalus_client:username(Client), Stanza]),
+              amoc_metrics:update_counter(muc_messages_sent)
+      end}].
+
+-spec received_handler_spec() -> [amoc_xmpp_handlers:handler_spec()].
+received_handler_spec() ->
+    [{fun is_muc_notification/1,
+      fun(Client, Stanza) ->
+              ?LOG_DEBUG("~s received MUC notification ~p", [escalus_client:username(Client), Stanza]),
+              amoc_metrics:update_counter(muc_notifications_received)
+      end},
+     {fun is_muc_message/1,
+      fun(Client, Stanza, Metadata) ->
+              ?LOG_DEBUG("~s received MUC message ~p", [escalus_client:username(Client), Stanza]),
+              amoc_metrics:update_counter(muc_messages_received),
+              amoc_metrics:update_time(message_ttd, ttd(Stanza, Metadata))
+      end}].
+
+-spec ttd(exml:element(), escalus_connection:metadata()) -> non_neg_integer().
+ttd(Stanza, #{recv_timestamp := ReceivedTS}) ->
+    SentBin = exml_query:path(Stanza, [{element, <<"body">>}, cdata]),
+    ReceivedTS - binary_to_integer(SentBin).
+
+-spec is_muc_notification(exml:element()) -> boolean().
+is_muc_notification(Stanza) ->
+    is_muc_message(Stanza)
+        andalso lists:member(exml_query:path(Stanza, [{element, <<"body">>}, cdata]), [<<>>, undefined])
+        andalso (has_muc_subject(Stanza) orelse has_muc_light_notification(Stanza)).
+
+-spec has_muc_subject(exml:element()) -> boolean().
+has_muc_subject(Stanza) ->
+    exml_query:subelement(Stanza, <<"subject">>) =/= undefined.
+
+-spec has_muc_light_notification(exml:element()) -> boolean().
+has_muc_light_notification(Stanza) ->
+    lists:member(exml_query:path(Stanza, [{element, <<"x">>}, {attr, <<"xmlns">>}]),
+                [ns(muc_light_affiliations), ns(muc_light_configuration)]).
+
+-spec is_muc_message(exml:element()) -> boolean().
+is_muc_message(Stanza = #xmlel{name = <<"message">>}) ->
+    exml_query:attr(Stanza, <<"type">>) =:= <<"groupchat">>;
+is_muc_message(_) -> false.
+
+-spec send_message_to_room(escalus:client(), binary()) -> ok.
+send_message_to_room(Client, RoomJid) ->
+    Timestamp = integer_to_binary(os:system_time(microsecond)),
+    escalus:send(Client, escalus_stanza:groupchat_to(RoomJid, Timestamp)).
+
+%%% MUC Light: Room creation
 
 -spec create_muc_light_room(escalus:client(), binary(), binary(), [binary()]) -> ok.
 create_muc_light_room(Client, RoomName, RoomJid, MemberJids) ->
-    Req = stanza_create_room(RoomName, RoomJid, MemberJids),
+    Req = muc_light_stanza_create_room(RoomName, RoomJid, MemberJids),
     Pred = fun(Stanza) -> escalus_pred:is_iq_result(Req, Stanza) end,
-    TimeMetric = room_creation_response_time,
-    amoc_xmpp:send_request_and_get_response(Client, Req, Pred, TimeMetric, 10000),
-    %% TODO check response
+    Resp = amoc_xmpp:send_request_and_get_response(Client, Req, Pred, response, 10000),
+    ?LOG_DEBUG("~s got room creation response ~p", [escalus_client:username(Client), Resp]),
+    amoc_metrics:update_counter(muc_occupants, length(MemberJids) + 1),
     amoc_metrics:update_counter(muc_rooms_created).
 
--spec stanza_create_room(binary(), binary(), [binary()]) -> exml:element().
-stanza_create_room(RoomName, RoomJid, MemberJids) ->
+-spec muc_light_stanza_create_room(binary(), binary(), [binary()]) -> exml:element().
+muc_light_stanza_create_room(RoomName, RoomJid, MemberJids) ->
     ConfigFields = [kv_el(<<"roomname">>, RoomName)],
     ConfigElement = #xmlel{name = <<"configuration">>, children = ConfigFields},
     UserFields = [user_element(Jid, <<"member">>) || Jid <- MemberJids],
@@ -58,17 +137,97 @@ kv_el(K, V) ->
     #xmlel{name = K,
            children = [#xmlcdata{content = V}]}.
 
+ns(muc_light_affiliations) -> <<"urn:xmpp:muclight:0#affiliations">>;
+ns(muc_light_configuration) -> <<"urn:xmpp:muclight:0#configuration">>;
 ns(muc_light_create) -> <<"urn:xmpp:muclight:0#create">>.
 
-%% Room distribution by buckets
+%%% MUC: Room entry and creation
 
--spec rooms_to_join(amoc_scenario:user_id()) -> [pos_integer()].
+-spec enter_muc_room(escalus:client(), binary()) -> ok.
+enter_muc_room(Client, RoomJid) ->
+    Nick = escalus_client:username(Client),
+    RoomFullJid = muc_room_full_jid(RoomJid, Nick),
+    Req = muc_stanza_enter_room(RoomFullJid),
+    Resp = amoc_xmpp:send_request_and_get_response(
+        Client, Req, fun(Stanza) -> is_muc_presence_resp(Req, Stanza) end, response, 10000),
+    amoc_metrics:update_counter(muc_presences_received),
+    case room_entry_response_type(Resp) of
+        created ->
+            amoc_metrics:update_counter(muc_rooms_created),
+            amoc_metrics:update_counter(muc_occupants),
+            ?LOG_INFO("~s created room ~s", [Nick, RoomJid]),
+            configure_instant_room(Client, Nick, RoomJid);
+        joined ->
+            amoc_metrics:update_counter(muc_occupants),
+            ?LOG_INFO("~s joined room ~s", [Nick, RoomJid])
+    end.
+
+muc_room_full_jid(RoomJid, Nick) ->
+    <<RoomJid/binary, $/, Nick/binary>>.
+
+-spec muc_stanza_enter_room(binary()) -> exml:element().
+muc_stanza_enter_room(RoomJid) ->
+    X = #xmlel{name = <<"x">>, attrs = #{<<"xmlns">> => ?NS_MUC}},
+    Presence = escalus_stanza:to(escalus_stanza:presence(<<"available">>), RoomJid),
+    Presence#xmlel{children = [X]}.
+
+-spec is_muc_presence_resp(exml:element(), exml:element()) -> boolean().
+is_muc_presence_resp(Req, Resp = #xmlel{name = <<"presence">>}) ->
+    is_muc_presence(Resp) andalso
+        escalus_utils:jid_to_lower(exml_query:attr(Req, <<"to">>)) =:=
+        escalus_utils:jid_to_lower(exml_query:attr(Resp, <<"from">>));
+is_muc_presence_resp(_, _) -> false.
+
+-spec is_muc_presence(exml:element()) -> boolean().
+is_muc_presence(Stanza) ->
+    exml_query:path(Stanza, [{element, <<"x">>}, {attr, <<"xmlns">>}]) =:= ?NS_MUC_USER.
+
+-spec room_entry_response_type(exml:element()) -> created | joined | locked.
+room_entry_response_type(Stanza) ->
+    case exml_query:attr(Stanza, <<"type">>) of
+        undefined ->
+            StatusList = exml_query:paths(Stanza, [{element, <<"x">>},
+                                                   {element, <<"status">>},
+                                                   {attr, <<"code">>}]),
+            [Affiliation] = exml_query:paths(Stanza, [{element, <<"x">>},
+                                                      {element, <<"item">>},
+                                                      {attr, <<"affiliation">>}]),
+            [Role] = exml_query:paths(Stanza, [{element, <<"x">>},
+                                               {element, <<"item">>},
+                                               {attr, <<"role">>}]),
+            room_entry_success_response_type(lists:sort(StatusList), Affiliation, Role);
+        <<"error">> ->
+            true = escalus_pred:is_error(<<"cancel">>, <<"item-not-found">>, Stanza),
+            locked
+    end.
+
+room_entry_success_response_type([<<"110">>, <<"201">>], <<"owner">>, <<"moderator">>) -> created;
+room_entry_success_response_type([<<"110">>], <<"none">>, <<"participant">>) -> joined.
+
+-spec configure_instant_room(escalus:client(), binary(), binary()) -> ok.
+configure_instant_room(Client, Nick, RoomJid) ->
+    Req = stanza_configure_instant_room(RoomJid),
+    Resp = amoc_xmpp:send_request_and_get_response(
+             Client, Req, fun(Stanza) -> escalus_pred:is_iq_result(Req, Stanza) end,
+             response, 10000),
+    ?LOG_DEBUG("~s got room creation response ~p", [Nick, Resp]),
+    ?LOG_INFO("~s configured instant room ~s", [Nick, RoomJid]).
+
+-spec stanza_configure_instant_room(binary()) -> exml:element().
+stanza_configure_instant_room(RoomJid) ->
+    EmptyForm = escalus_stanza:x_data_form(<<"submit">>, []),
+    Stanza = escalus_stanza:iq_set(?NS_MUC_OWNER, [EmptyForm]),
+    escalus_stanza:to(Stanza, RoomJid).
+
+%%% Room distribution by buckets
+
+-spec rooms_to_join(amoc_scenario:user_id()) -> [room_id()].
 rooms_to_join(UserId) ->
     rooms_to_join(UserId, cfg(rooms_per_user), cfg(users_per_room)).
 
 %% @doc Returns the IDs of rooms joined by the specified user, intended for MUC.
 %% The order is important for equal distribution of created rooms
--spec rooms_to_join(amoc_scenario:user_id(), pos_integer(), pos_integer()) -> [pos_integer()].
+-spec rooms_to_join(amoc_scenario:user_id(), pos_integer(), pos_integer()) -> [room_id()].
 rooms_to_join(UserId, RoomsPerUser, UsersPerRoom) ->
     BasicRoom = round_id((UserId - 1) * RoomsPerUser / UsersPerRoom, RoomsPerUser > UsersPerRoom),
     RoomBucketPos = BasicRoom rem RoomsPerUser,
@@ -76,12 +235,12 @@ rooms_to_join(UserId, RoomsPerUser, UsersPerRoom) ->
     lists:seq(BasicRoom + 1, RoomBucketStartId + RoomsPerUser - 1)
         ++ lists:seq(RoomBucketStartId, BasicRoom).
 
--spec rooms_to_create(amoc_scenario:user_id()) -> [pos_integer()].
+-spec rooms_to_create(amoc_scenario:user_id()) -> [room_id()].
 rooms_to_create(UserId) ->
     rooms_to_create(UserId, cfg(rooms_per_user), cfg(users_per_room)).
 
 %% @doc Returns the IDs of rooms created by the specified user, intended for MUC Light.
--spec rooms_to_create(amoc_scenario:user_id(), pos_integer(), pos_integer()) -> [pos_integer()].
+-spec rooms_to_create(amoc_scenario:user_id(), pos_integer(), pos_integer()) -> [room_id()].
 rooms_to_create(UserId, RoomsPerUser, UsersPerRoom) ->
     MyRooms = rooms_to_join(UserId, RoomsPerUser, UsersPerRoom),
     lists:filter(fun(R) -> creator(R, RoomsPerUser, UsersPerRoom) =:= UserId end, MyRooms).
@@ -113,7 +272,19 @@ bucket_ids(Id, BucketSize) ->
     BucketStartId = Id - Position,
     lists:seq(BucketStartId, BucketStartId + BucketSize - 1).
 
-%% Debug - print user distribution in rooms
+-spec muc_light_room_jid(room_id(), binary()) -> binary().
+muc_light_room_jid(RoomId, Domain) ->
+    <<(room_name(RoomId))/binary, $@, (cfg(muc_light_prefix))/binary, $., Domain/binary>>.
+
+-spec muc_room_jid(room_id(), binary()) -> binary().
+muc_room_jid(RoomId, Domain) ->
+    <<(room_name(RoomId))/binary, $@, (cfg(muc_prefix))/binary, $., Domain/binary>>.
+
+-spec room_name(room_id()) -> binary().
+room_name(RoomId) ->
+    <<"room_", (integer_to_binary(RoomId))/binary>>.
+
+%%% Debug - print user distribution in rooms
 
 %% @doc Print a matrix specifying the relation between users and rooms.
 %%   Each row means one user, each column means one room.
