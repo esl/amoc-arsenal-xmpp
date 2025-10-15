@@ -80,7 +80,7 @@ received_handler_spec() ->
 
 -spec ttd(exml:element(), escalus_connection:metadata()) -> non_neg_integer().
 ttd(Stanza, #{recv_timestamp := ReceivedTS}) ->
-    SentBin = exml_query:path(Stanza, [{element, <<"body">>}, cdata]),
+    SentBin = exml_query:path(Stanza, [{element, <<"timestamp">>}, cdata]),
     ReceivedTS - binary_to_integer(SentBin).
 
 -spec is_muc_notification(exml:element()) -> boolean().
@@ -106,7 +106,9 @@ is_muc_message(_) -> false.
 -spec send_message_to_room(escalus:client(), binary()) -> ok.
 send_message_to_room(Client, RoomJid) ->
     Timestamp = integer_to_binary(os:system_time(microsecond)),
-    escalus:send(Client, escalus_stanza:groupchat_to(RoomJid, Timestamp)).
+    Message = #xmlel{children = Children} = escalus_stanza:groupchat_to(RoomJid, cfg(message_body)),
+    TimestampElement = #xmlel{name = <<"timestamp">>, children = [#xmlcdata{content = Timestamp}]},
+    escalus:send(Client, Message#xmlel{children = [TimestampElement | Children]}).
 
 %%% MUC Light: Room creation
 

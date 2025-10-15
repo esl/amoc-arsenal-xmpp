@@ -62,7 +62,7 @@ do(MyId, Client) ->
 
 -spec send_stanza(escalus:client(), chat, #state{}) -> #state{}.
 send_stanza(Client, chat, State = #state{neighbours = [RecipientId | Rest]}) ->
-    Msg = escalus_stanza:chat_to_with_id_and_timestamp(make_jid(RecipientId), <<"hello">>),
+    Msg = escalus_stanza:chat_to_with_id_and_timestamp(make_jid(RecipientId), cfg(message_body)),
     escalus_connection:send(Client, Msg),
     State#state{neighbours = Rest ++ [RecipientId]}.
 
