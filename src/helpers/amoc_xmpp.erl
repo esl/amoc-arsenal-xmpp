@@ -15,7 +15,9 @@
     #{name => legacy_tls, description => "use legacy tls connection",
       default_value => false,  verification => ?V(boolean)},
     #{name => connection_attempts, default_value => 1, verification => ?V(positive_integer),
-      description => "number of attempts to establish xmpp connection before exiting"}]).
+      description => "number of attempts to establish xmpp connection before exiting"},
+    #{name => message_body, default_value => <<"hello">>, verification => ?V(binary),
+      description => "body of the message to send"}]).
 
 %% @doc Connects and authenticates a user with the given id and additional properties.
 %% If the passed proplist is empty, a default user spec created by
