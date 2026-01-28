@@ -10,4 +10,4 @@ echo "ERLANG/OTP ${otp_vsn}"
 
 docker buildx build --platform linux/amd64,linux/arm64 \
        --target prod --push --build-arg otp_vsn \
-       -t mongooseim/amoc-arsenal-xmpp:latest .
+       -t erlangsolutions/amoc-arsenal-xmpp:latest .
