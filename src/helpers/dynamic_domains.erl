@@ -4,14 +4,14 @@
          connect_or_exit/2,
          connect_or_exit/3,
          get_rest_api_host/0,
-         domain_name/1,
-         domain_id/1]).
+         make_jid/1,
+         domain_name/1]).
 
 -define(V(X), (fun amoc_config_validation:X/1)).
 
 -required_variable(
-   [#{name => domain_count, default_value => 10000, verification => ?V(positive_integer),
-      description => "Number of dynamic domains"},
+   [#{name => domain_count, default_value => 10000, verification => ?V(nonnegative_integer),
+      description => "Number of dynamic domains. Set to 0 to use host_type as a static host"},
     #{name => domain_bucket_size, default_value => 1, verification => ?V(positive_integer),
       description => "Number of consecutive users belonging to the same domain"},
     #{name => domain_prefix, default_value => <<"test-domain-">>, verification => ?V(binary),
@@ -49,11 +49,14 @@ connect_or_exit(Id, ExtraSpec) ->
           {ok, escalus_connection:client(), escalus_users:user_spec()}.
 connect_or_exit(Id, ExtraSpec, Opts) ->
     Spec = amoc_xmpp:make_user(Id, [{server, dynamic_domains:domain_name(Id)} | ExtraSpec]),
-    maybe_create_domain(Id, Spec, Opts),
+    maybe_create_domain(Id, Spec, Opts, cfg(domain_count)),
     amoc_xmpp:connect_or_exit(Spec).
 
--spec maybe_create_domain(amoc_scenario:user_id(), escalus_users:user_spec(), connect_opts()) -> ok.
-maybe_create_domain(UserId, UserSpec, Opts) ->
+-spec maybe_create_domain(amoc_scenario:user_id(), escalus_users:user_spec(), connect_opts(),
+                          non_neg_integer()) -> ok.
+maybe_create_domain(_UserId, _UserSpec, _Opts, 0) ->
+    ok;
+maybe_create_domain(UserId, UserSpec, Opts, _DomainCount) ->
     case should_create_domain(UserId, Opts) of
         true ->
             Host = get_rest_api_host(),
@@ -111,9 +114,18 @@ create_domain_mutation(Domain) ->
 
 -spec domain_name(amoc_scenario:user_id()) -> binary().
 domain_name(UserId) ->
-    Prefix = cfg(domain_prefix),
-    BinId = integer_to_binary(domain_id(UserId)),
-    <<Prefix/binary, BinId/binary>>.
+    case cfg(domain_count) of
+        0 ->
+            cfg(host_type);
+        _ ->
+            Prefix = cfg(domain_prefix),
+            BinId = integer_to_binary(domain_id(UserId)),
+            <<Prefix/binary, BinId/binary>>
+    end.
+
+-spec make_jid(amoc_scenario:user_id()) -> binary().
+make_jid(UserId) ->
+    amoc_xmpp_users:make_jid(UserId, domain_name(UserId)).
 
 -spec domain_id(amoc_scenario:user_id()) -> pos_integer().
 domain_id(UserId) ->
