@@ -70,7 +70,7 @@ send_stanza(Client, chat, State = #state{neighbours = [RecipientId | Rest]}) ->
 
 -spec make_jid(amoc_scenario:user_id()) -> binary().
 make_jid(Id) ->
-    amoc_xmpp_users:make_jid(Id, dynamic_domains:domain_name(Id)).
+    dynamic_domains:make_jid(Id).
 
 %% Stanza handlers
 
