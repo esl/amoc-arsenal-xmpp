@@ -1,4 +1,4 @@
-ARG otp_vsn=27.3
+ARG otp_vsn=28.5
 FROM erlang:${otp_vsn} AS builder
 LABEL org.label-schema.name='AMOC Arsenal' \
       org.label-schema.vendor='Erlang Solutions'
